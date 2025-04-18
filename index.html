@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مخزن إلكترون</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo&display=swap" rel="stylesheet">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' http://localhost:3001; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>body { font-family: 'Cairo', sans-serif; }</style>
+</head>
+<body class="bg-gray-100">
+  <div class="max-w-md mx-auto mt-20 bg-white rounded-lg shadow-lg p-6">
+    <div class="flex justify-center mb-4">
+      <button id="loginTab" class="px-4 py-2 text-blue-600 border-b-2 border-blue-600">تسجيل الدخول</button>
+      <button id="registerTab" class="px-4 py-2 text-gray-600 hover:text-blue-600">إنشاء حساب</button>
+    </div>
+    <div id="loginForm">
+      <h1 class="text-2xl text-center mb-4">تسجيل الدخول</h1>
+      <div id="loginMsg"></div>
+      <form class="space-y-4">
+        <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" class="w-full border px-3 py-2 rounded" required />
+        <input type="password" id="loginPassword" placeholder="كلمة المرور" class="w-full border px-3 py-2 rounded" required />
+        <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">دخول</button>
+      </form>
+    </div>
+    <div id="registerForm" class="hidden">
+      <h1 class="text-2xl text-center mb-4">إنشاء حساب</h1>
+      <div id="registerMsg"></div>
+      <form class="space-y-4">
+        <input type="text" id="name" placeholder="الاسم" class="w-full border px-3 py-2 rounded" required />
+        <input type="email" id="email" placeholder="البريد الإلكتروني" class="w-full border px-3 py-2 rounded" required />
+        <input type="password" id="password" placeholder="كلمة المرور" class="w-full border px-3 py-2 rounded" required />
+        <button type="submit" class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">تسجيل</button>
+      </form>
+    </div>
+  </div>
+  <script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "makhzone-electron",
+  "version": "1.0.0",
+  "description": "إعادة بناء مشروع المخزن بواجهة إلكترون جي إس ونود جي إس وقاعدة بيانات SQLite محلية.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "electron": "^35.1.5",
+    "express": "^5.1.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.4"
+  }
+}

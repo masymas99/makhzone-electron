@@ -1,0 +1,3 @@
+*.sqlite*
+# add node_modules/.bin to PATH
+/node_modules

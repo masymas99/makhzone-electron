@@ -1,0 +1,2613 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' http://localhost:3001">
+  <title>لوحة التحكم</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .sidebar {
+      transition: width 0.3s;
+    }
+    .sidebar.collapsed {
+      width: 80px;
+    }
+    .sidebar.collapsed .sidebar-text {
+      display: none;
+    }
+    .sidebar.collapsed .sidebar-icon {
+      margin-right: 0; /* Adjust icon margin when collapsed if needed */
+    }
+    .table-row:nth-child(even) {
+      background-color: #f9fafb; /* light gray */
+    }
+    .table-row:hover {
+      background-color: #e5e7eb; /* darker gray */
+    }
+  </style>
+  <!-- Modern form labels and input styling -->
+  <style>
+    /* Style labels in forms */
+    #content form label {
+      display: block; /* Make labels take their own line */
+      font-size: 0.875rem; /* 14px */
+      font-weight: 500; /* Medium weight */
+      color: #374151; /* Gray-700 */
+      margin-bottom: 0.25rem; /* Add space below the label */
+    }
+    /* Style inputs, selects, and textareas in forms */
+    #content form input[type="text"],
+    #content form input[type="number"],
+    #content form input[type="date"],
+    #content form select,
+    #content form textarea {
+      margin-top: 0.25rem; /* Add space above the input if the label is above it */
+      display: block;
+      width: 100%;
+      padding: 0.5rem 0.75rem; /* Adjust padding */
+      border: 1px solid #D1D5DB; /* Gray-300 border */
+      border-radius: 0.375rem; /* Rounded corners */
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Subtle shadow */
+      background-color: #fff; /* White background */
+      color: #1f2937; /* Gray-800 text */
+    }
+    /* Focus state for inputs, selects, textareas */
+    #content form input[type="text"]:focus,
+    #content form input[type="number"]:focus,
+    #content form input[type="date"]:focus,
+    #content form select:focus,
+    #content form textarea:focus {
+      outline: none;
+      border-color: #3B82F6; /* Blue-500 border */
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); /* Blue focus ring */
+    }
+    /* Specific styling for dynamically added rows if needed */
+    #productRows > div, #purchaseRows > div {
+      margin-bottom: 0.5rem; /* Add space between dynamic rows */
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <!-- Header -->
+  <header class="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
+    <div class="flex items-center space-x-4">
+      <button id="toggleSidebar" class="text-gray-600 hover:text-blue-600 focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+        </svg>
+      </button>
+      <h1 class="text-xl font-semibold">مرحبا، <span id="userName" class="font-bold"></span></h1>
+    </div>
+    <button id="logout" class="bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200">
+      تسجيل الخروج
+    </button>
+  </header>
+
+  <!-- Layout -->
+  <div class="flex min-h-[calc(100vh-64px)]">
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar w-64 bg-white p-6 border-r shadow-lg transition-all duration-300">
+      <ul class="space-y-3">
+        <li>
+          <a href="#" data-page="sales" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 transition-colors duration-200">
+            <svg class="sidebar-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span class="sidebar-text text-lg font-medium">الفواتير</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" data-page="products" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-100 hover:text-green-600 transition-colors duration-200">
+            <svg class="sidebar-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+            <span class="sidebar-text text-lg font-medium">المنتجات</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" data-page="traders" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-purple-100 hover:text-purple-600 transition-colors duration-200">
+            <svg class="sidebar-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span class="sidebar-text text-lg font-medium">التجار</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" data-page="purchases" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-yellow-100 hover:text-yellow-600 transition-colors duration-200">
+            <svg class="sidebar-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span class="sidebar-text text-lg font-medium">المشتريات</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" data-page="expenses" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors duration-200">
+            <svg class="sidebar-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span class="sidebar-text text-lg font-medium">المصروفات</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" data-page="payments" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-orange-100 hover:text-orange-600 transition-colors duration-200">
+            <svg class="sidebar-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span class="sidebar-text text-lg font-medium">الدفعات</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Content -->
+    <main id="content" class="flex-1 p-6 overflow-auto">
+      <!-- Content will be dynamically loaded here -->
+    </main>
+  </div>
+
+  <script>
+    // Auth guard
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user) window.location.href = 'index.html';
+    document.getElementById('userName').innerText = user.name;
+    document.getElementById('logout').addEventListener('click', () => {
+      localStorage.removeItem('user');
+      window.location.href = 'index.html';
+    });
+    // Helper: format date string for display
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return new Intl.DateTimeFormat('ar-EG', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(d);
+    }
+    // Helper: format date for input type="date"
+    function formatDateForInput(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // Loader functions (Tables remain mostly the same)
+    async function loadSales() {
+      const res = await fetch('http://localhost:3001/api/sales');
+      const data = await res.json();
+      let html = '<div class="flex justify-between items-center mb-4">'
+        + '<h2 class="text-2xl">قائمة الفواتير</h2>'
+        + '<button id="addSaleBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إنشاء فاتورة</button>'
+      + '</div>';
+      if (!res.ok) html += `<p class="text-red-600">${data.error}</p>`;
+      else if (data.length === 0) html += '<p>لا توجد فواتير.</p>';
+      else {
+        html += '<table class="min-w-full bg-white border">';
+        html += '<thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">التاجر</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th><th class="border px-2 py-1">الإجراءات</th></tr></thead>';
+        html += '<tbody>';
+        data.forEach(s => {
+          html += `<tr class="table-row">
+            <td class="border px-2 py-1">${s.SaleID}</td>
+            <td class="border px-2 py-1">${s.trader?.TraderName || '-'}</td>
+            <td class="border px-2 py-1">${formatDate(s.SaleDate)}</td>
+            <td class="border px-2 py-1">${s.TotalAmount?.toFixed(2) || '0.00'}</td>
+            <td class="border px-2 py-1 space-x-2">
+              <button class="view-sale text-blue-600 hover:underline" data-id="${s.SaleID}">عرض</button>
+              <button class="edit-sale text-green-600 hover:underline" data-id="${s.SaleID}">تعديل</button>
+              <button class="delete-sale text-red-600 hover:underline" data-id="${s.SaleID}">حذف</button>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+      }
+      document.getElementById('content').innerHTML = html;
+      document.getElementById('addSaleBtn')?.addEventListener('click', showAddSaleForm); // Add null check
+      document.querySelectorAll('.view-sale').forEach(btn => btn.addEventListener('click', () => showSaleDetails(btn.dataset.id)));
+      document.querySelectorAll('.edit-sale').forEach(btn => btn.addEventListener('click', () => showEditSaleForm(btn.dataset.id)));
+      document.querySelectorAll('.delete-sale').forEach(btn => btn.addEventListener('click', () => deleteSale(btn.dataset.id)));
+    }
+    async function loadProducts() {
+      const res = await fetch('http://localhost:3001/api/products');
+      const data = await res.json();
+      let html = '<div class="flex justify-between items-center mb-4">'
+        + '<h2 class="text-2xl">المنتجات</h2>'
+        + '<button id="addProductBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة منتج</button>'
+      + '</div>';
+      html += '<table class="min-w-full bg-white border">';
+      html += '<thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الاسم</th><th class="border px-2 py-1">الصنف</th><th class="border px-2 py-1">الكمية</th><th class="border px-2 py-1">سعر البيع</th><th class="border px-2 py-1">سعر التكلفة</th><th class="border px-2 py-1">الإجراءات</th></tr></thead>';
+      html += '<tbody>';
+      if (res.ok && data.length) {
+        data.forEach(p => {
+            html += `<tr class="table-row"><td class="border px-2 py-1">${p.ProductID}</td><td class="border px-2 py-1">${p.ProductName}</td><td class="border px-2 py-1">${p.Category}</td><td class="border px-2 py-1">${p.StockQuantity}</td><td class="border px-2 py-1">${p.UnitPrice.toFixed(2)}</td><td class="border px-2 py-1">${p.UnitCost ? p.UnitCost.toFixed(2) : '-'}</td><td class="border px-2 py-1"><button data-id="${p.ProductID}" class="edit-product bg-yellow-400 px-2 py-1 rounded mr-1 hover:bg-yellow-500">تعديل</button><button data-id="${p.ProductID}" class="delete-product bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">حذف</button></td></tr>`;
+        });
+      } else html += '<tr><td colspan="7" class="text-center py-2">لا توجد بيانات</td></tr>'; // Updated colspan
+      html += '</tbody></table>';
+      document.getElementById('content').innerHTML = html;
+      document.querySelectorAll('.edit-product').forEach(btn => btn.addEventListener('click', () => showEditProductForm(btn.dataset.id)));
+      document.querySelectorAll('.delete-product').forEach(btn => btn.addEventListener('click', () => deleteProduct(btn.dataset.id)));
+      document.getElementById('addProductBtn')?.addEventListener('click', showAddProductForm); // Add null check
+    }
+    async function loadTraders() {
+      const res = await fetch('http://localhost:3001/api/traders');
+      const data = await res.json();
+      let html = '<div class="flex justify-between items-center mb-4">'
+        + '<h2 class="text-2xl">التجار</h2>'
+        + '<button id="addTraderBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة تاجر</button>'
+      + '</div>';
+      html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الاسم</th><th class="border px-2 py-1">الرصيد الحالي</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
+      if (res.ok && data.length) {
+        // Fetch all sales and payments once for efficiency
+        const [allSalesRes, allPaymentsRes] = await Promise.all([
+            fetch('http://localhost:3001/api/sales'),
+            fetch('http://localhost:3001/api/payments')
+        ]);
+        const allSales = await allSalesRes.json();
+        const allPayments = await allPaymentsRes.json();
+
+        await Promise.all(data.map(async t => {
+            // Filter sales and payments for the current trader
+            const traderSales = allSales.filter(sale => sale.TraderID === t.TraderID);
+            const traderPayments = allPayments.filter(payment => payment.TraderID === t.TraderID);
+
+            // Calculate totals for this trader
+            const totalSalesAmount = traderSales.reduce((sum, sale) => sum + (sale.TotalAmount || 0), 0);
+            const totalPaidOnSales = traderSales.reduce((sum, sale) => sum + (sale.PaidAmount || 0), 0);
+            const totalManualPayments = traderPayments.reduce((sum, payment) => sum + (payment.Amount || 0), 0);
+
+            // Calculate balance: Total Payments (manual + on sales) - Total Sales Amount
+            const balance = (totalManualPayments + totalPaidOnSales) - totalSalesAmount;
+
+            const balanceClass = balance < 0 ? 'text-red-600' : 'text-green-600';
+            const balanceSign = balance >= 0 ? '+' : ''; // Show + for zero or positive
+            const balanceValue = Math.abs(balance).toFixed(2);
+
+            // Update trader's balance in the database (Consider if this is needed on every load)
+            /*
+            try {
+              await fetch(`http://localhost:3001/api/traders/${t.TraderID}/balance`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ balance }) // Send the calculated balance
+              });
+            } catch (error) {
+              console.error(`Error updating balance for trader ${t.TraderID}:`, error);
+            }
+            */
+
+            html += `<tr class="table-row">
+                <td class="border px-2 py-1">${t.TraderID}</td>
+                <td class="border px-2 py-1">${t.TraderName}</td>
+                <td class="border px-2 py-1 font-semibold ${balanceClass}">${balanceSign}${balanceValue}</td>
+                <td class="border px-2 py-1">
+                <button data-id="${t.TraderID}" class="view-trader bg-blue-500 text-white px-2 py-1 rounded mr-1 hover:bg-blue-600">عرض</button>
+                <button data-id="${t.TraderID}" class="manual-payment bg-purple-500 text-white px-2 py-1 rounded mr-1 hover:bg-purple-600">إضافة دفعة</button>
+                <button data-id="${t.TraderID}" class="edit-trader bg-yellow-400 px-2 py-1 rounded mr-1 hover:bg-yellow-500">تعديل</button>
+                <button data-id="${t.TraderID}" class="delete-trader bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">حذف</button>
+                </td>
+            </tr>`;
+        }));
+      } else {
+        html += '<tr><td colspan="4" class="text-center py-2">لا توجد بيانات</td></tr>'; // Updated colspan
+      }
+      html += '</tbody></table>';
+      document.getElementById('content').innerHTML = html;
+      document.getElementById('addTraderBtn')?.addEventListener('click', showAddTraderForm);
+      document.querySelectorAll('.view-trader').forEach(btn => btn.addEventListener('click', e => showTraderDetails(e.target.dataset.id)));
+      document.querySelectorAll('.manual-payment').forEach(btn => btn.addEventListener('click', e => showManualPaymentForm(e.target.dataset.id))); // Keep this or remove if details view is preferred
+      document.querySelectorAll('.edit-trader').forEach(btn => btn.addEventListener('click', e => showEditTraderForm(e.target.dataset.id)));
+      document.querySelectorAll('.delete-trader').forEach(btn => btn.addEventListener('click', e => deleteTrader(e.target.dataset.id)));
+    }
+    async function loadPurchases() {
+        const res = await fetch('http://localhost:3001/api/purchases');
+        const data = await res.json();
+        console.log('Loading purchases data:', data);
+
+        let html = `
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl">المشتريات</h2>
+                <button id="addPurchaseBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إنشاء مشتريات</button>
+            </div>
+            <table class="min-w-full bg-white border">
+                <thead>
+                    <tr>
+                        <th class="border px-2 py-1">ID</th>
+                        <th class="border px-2 py-1">التاريخ</th>
+                        <th class="border px-2 py-1">المورد</th>
+                        <th class="border px-2 py-1">الإجمالي</th>
+                        <th class="border px-2 py-1">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="purchasesTableBody">
+                </tbody>
+            </table>
+        `;
+
+        document.getElementById('content').innerHTML = html;
+
+        const addBtn = document.getElementById('addPurchaseBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', async () => {
+                showAddPurchaseForm(); // Call the form directly
+            });
+        }
+
+        if (!res.ok) {
+            console.error('Error loading purchases:', data.error);
+            document.getElementById('purchasesTableBody').innerHTML =
+                `<tr><td colspan="5" class="text-center py-2 text-red-600">${data.error || 'خطأ في تحميل المشتريات'}</td></tr>`;
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            document.getElementById('purchasesTableBody').innerHTML =
+                '<tr><td colspan="5" class="text-center py-2">لا توجد مشتريات</td></tr>';
+            return;
+        }
+
+        // Group purchases by PurchaseID to display one row per purchase summary
+        const groupedPurchases = {};
+        data.forEach(p => {
+            if (!groupedPurchases[p.PurchaseID]) {
+                groupedPurchases[p.PurchaseID] = {
+                    PurchaseID: p.PurchaseID,
+                    PurchaseDate: p.PurchaseDate,
+                    SupplierName: p.SupplierName,
+                    TotalAmount: 0, // Calculate total amount from details
+                    details: []
+                };
+            }
+            // Add detail and sum up total amount
+            groupedPurchases[p.PurchaseID].details.push(p);
+            if (p.detail_quantity != null && p.detail_unit_cost != null) {
+                groupedPurchases[p.PurchaseID].TotalAmount += p.detail_quantity * p.detail_unit_cost;
+            } else if (p.TotalAmount != null) {
+                groupedPurchases[p.PurchaseID].TotalAmount += p.TotalAmount;
+            }
+        });
+
+
+        const tbody = document.getElementById('purchasesTableBody');
+        tbody.innerHTML = ''; // Clear previous content
+
+        Object.values(groupedPurchases).forEach(p => {
+            const row = document.createElement('tr');
+            row.className = 'table-row';
+            row.innerHTML = `
+                <td class="border px-2 py-1">${p.PurchaseID}</td>
+                <td class="border px-2 py-1">${formatDate(p.PurchaseDate)}</td>
+                <td class="border px-2 py-1">${p.SupplierName || '-'}</td>
+                <td class="border px-2 py-1">${p.TotalAmount.toFixed(2)}</td>
+                <td class="border px-2 py-1">
+                    <button data-id="${p.PurchaseID}" class="view-purchase text-blue-600 hover:underline mr-2">عرض</button>
+                    <button data-id="${p.PurchaseID}" class="edit-purchase text-yellow-600 hover:underline mr-2">تعديل</button>
+                    <button data-id="${p.PurchaseID}" class="delete-purchase text-red-600 hover:underline">حذف</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Add event listeners for view buttons
+         document.querySelectorAll('.view-purchase').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                showPurchaseDetails(id);
+            });
+        });
+
+        // Add event listeners for edit buttons
+        document.querySelectorAll('.edit-purchase').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                showEditPurchaseForm(id);
+            });
+        });
+
+        // Add event listeners for delete buttons
+        document.querySelectorAll('.delete-purchase').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                deletePurchase(id);
+            });
+        });
+    }
+    async function loadExpenses() {
+      const res = await fetch('http://localhost:3001/api/expenses');
+      const data = await res.json();
+      let html = '<div class="flex justify-between items-center mb-4">'
+        + '<h2 class="text-2xl">المصروفات</h2>'
+        + '<button id="addExpenseBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة مصروف</button>'
+      + '</div>';
+      html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الوصف</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>'; // Added Actions column
+      if (res.ok && data.length) {
+        data.forEach(e => {
+          // Added Edit and Delete buttons
+          html += `<tr class="table-row"><td class="border px-2 py-1">${e.ExpenseID}</td><td class="border px-2 py-1">${e.Description}</td><td class="border px-2 py-1">${e.Amount.toFixed(2)}</td><td class="border px-2 py-1">${formatDate(e.ExpenseDate)}</td><td class="border px-2 py-1"><button data-id="${e.ExpenseID}" class="edit-expense text-yellow-600 hover:underline mr-2">تعديل</button><button data-id="${e.ExpenseID}" class="delete-expense text-red-600 hover:underline">حذف</button></td></tr>`;
+        });
+      } else html += '<tr><td colspan="5" class="text-center py-2">لا توجد بيانات</td></tr>'; // Updated colspan
+      html += '</tbody></table>';
+      document.getElementById('content').innerHTML = html;
+      document.getElementById('addExpenseBtn')?.addEventListener('click', showAddExpenseForm); // Add null check
+
+      // Add event listeners for edit/delete buttons
+      document.querySelectorAll('.edit-expense').forEach(btn => btn.addEventListener('click', () => showEditExpenseForm(btn.dataset.id)));
+      document.querySelectorAll('.delete-expense').forEach(btn => btn.addEventListener('click', () => deleteExpense(btn.dataset.id)));
+    }
+    function showAddExpenseForm() {
+      const today = new Date().toISOString().split('T')[0]; // Default to today
+      const html = `
+        <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+          <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة مصروف جديد</h3>
+          <div id="expenseMsg" class="mb-4"></div>
+          <form id="expenseForm" class="space-y-4">
+            <div>
+              <label for="expenseDate" class="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
+              <input type="date" id="expenseDate" name="expenseDate" value="${today}" class="mt-1 block w-full" required />
+            </div>
+            <div>
+              <label for="expenseDesc" class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
+              <input type="text" id="expenseDesc" name="expenseDesc" placeholder="أدخل وصف المصروف" class="mt-1 block w-full" required />
+            </div>
+            <div>
+              <label for="expenseAmount" class="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
+              <input type="number" step="0.01" min="0" id="expenseAmount" name="expenseAmount" placeholder="أدخل المبلغ" class="mt-1 block w-full" required />
+            </div>
+            <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+               <button type="button" id="cancelAddExpense" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+               <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ المصروف</button>
+            </div>
+          </form>
+        </div>
+      `;
+      document.getElementById('content').innerHTML = html;
+
+      document.getElementById('cancelAddExpense')?.addEventListener('click', loadExpenses); // Go back
+
+      document.getElementById('expenseForm')?.addEventListener('submit', async e => {
+        e.preventDefault();
+        const msgDiv = document.getElementById('expenseMsg');
+        msgDiv.innerHTML = ''; // Clear previous messages
+        const payload = {
+          ExpenseDate: document.getElementById('expenseDate').value,
+          Description: document.getElementById('expenseDesc').value.trim(),
+          Amount: +document.getElementById('expenseAmount').value
+        };
+
+        if (!payload.ExpenseDate || !payload.Description || payload.Amount <= 0) {
+            msgDiv.innerHTML = '<p class="text-red-600">يرجى ملء جميع الحقول بمبلغ صحيح.</p>';
+            return;
+        }
+
+        try {
+          const res = await fetch('http://localhost:3001/api/expenses', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (res.ok) {
+            loadExpenses(); // Reload the list on success
+          } else {
+            msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء الحفظ.'}</p>`;
+          }
+        } catch (error) {
+          console.error("Error adding expense:", error);
+          msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+        }
+      });
+    }
+    // --- Edit Expense Form ---
+    async function showEditExpenseForm(id) {
+        try {
+            const res = await fetch(`http://localhost:3001/api/expenses/${id}`);
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || `Expense with ID ${id} not found`);
+            }
+            const expense = await res.json();
+
+            const html = `
+            <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+              <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل المصروف #${id}</h3>
+              <div id="expenseMsg" class="mb-4"></div>
+              <form id="editExpenseForm" class="space-y-4">
+                <input type="hidden" id="editExpenseId" value="${expense.ExpenseID}">
+                <div>
+                  <label for="editExpenseDate" class="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
+                  <input type="date" id="editExpenseDate" name="editExpenseDate" value="${formatDateForInput(expense.ExpenseDate)}" class="mt-1 block w-full" required />
+                </div>
+                <div>
+                  <label for="editExpenseDesc" class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
+                  <input type="text" id="editExpenseDesc" name="editExpenseDesc" value="${expense.Description}" placeholder="أدخل وصف المصروف" class="mt-1 block w-full" required />
+                </div>
+                <div>
+                  <label for="editExpenseAmount" class="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
+                  <input type="number" step="0.01" min="0" id="editExpenseAmount" name="editExpenseAmount" value="${expense.Amount}" placeholder="أدخل المبلغ" class="mt-1 block w-full" required />
+                </div>
+                <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+                   <button type="button" id="cancelEditExpense" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                   <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
+                </div>
+              </form>
+            </div>
+          `;
+            document.getElementById('content').innerHTML = html;
+
+            document.getElementById('cancelEditExpense')?.addEventListener('click', loadExpenses); // Go back
+
+            document.getElementById('editExpenseForm')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                const msgDiv = document.getElementById('expenseMsg');
+                msgDiv.innerHTML = '';
+                const expenseId = document.getElementById('editExpenseId').value;
+                const payload = {
+                    ExpenseDate: document.getElementById('editExpenseDate').value,
+                    Description: document.getElementById('editExpenseDesc').value.trim(),
+                    Amount: +document.getElementById('editExpenseAmount').value
+                };
+
+                if (!payload.ExpenseDate || !payload.Description || payload.Amount <= 0) {
+                    msgDiv.innerHTML = '<p class="text-red-600">يرجى ملء جميع الحقول بمبلغ صحيح.</p>';
+                    return;
+                }
+
+                try {
+                    const updateRes = await fetch(`http://localhost:3001/api/expenses/${expenseId}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    const updateData = await updateRes.json();
+
+                    if (updateRes.ok) {
+                        loadExpenses(); // Reload list on success
+                    } else {
+                        msgDiv.innerHTML = `<p class="text-red-600">${updateData.error || 'حدث خطأ أثناء التعديل.'}</p>`;
+                    }
+                } catch (error) {
+                    console.error("Error updating expense:", error);
+                    msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+                }
+            });
+
+        } catch (error) {
+            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات المصروف: ${error.message}</p><button onclick="loadExpenses()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المصروفات</button>`;
+            console.error("Error loading expense for edit:", error);
+        }
+    }
+
+    // --- Delete Expense ---
+    async function deleteExpense(id) {
+      if (!confirm(`هل أنت متأكد من حذف المصروف رقم ${id}؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
+      try {
+        const res = await fetch(`http://localhost:3001/api/expenses/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+          alert('تم حذف المصروف بنجاح.');
+          loadExpenses(); // Refresh the list
+        } else {
+          alert(`فشل حذف المصروف: ${data.error || 'خطأ غير معروف'}`);
+        }
+      } catch (error) {
+        console.error("Error deleting expense:", error);
+        alert('حدث خطأ أثناء محاولة حذف المصروف.');
+      }
+    }
+
+    async function loadPayments() {
+        try {
+            const res = await fetch('http://localhost:3001/api/payments');
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Failed to load payments');
+            }
+            const data = await res.json();
+            let html = '<h2 class="text-2xl mb-4">الدفعات اليدوية للتجار</h2>'; // Clarify these are manual payments
+            html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الدفعة</th><th class="border px-2 py-1">ID التاجر</th><th class="border px-2 py-1">اسم التاجر</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">ملاحظات</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
+            if (data.length > 0) {
+                // Sort payments by date descending (newest first)
+                data.sort((a, b) => new Date(b.PaymentDate) - new Date(a.PaymentDate));
+
+                data.forEach(p => {
+                    html += `<tr class="table-row">
+                        <td class="border px-2 py-1">${p.PaymentID}</td>
+                        <td class="border px-2 py-1">${p.TraderID}</td>
+                        <td class="border px-2 py-1">${p.TraderName || 'غير متوفر'}</td>
+                        <td class="border px-2 py-1">${p.Amount.toFixed(2)}</td>
+                        <td class="border px-2 py-1">${formatDate(p.PaymentDate)}</td>
+                        <td class="border px-2 py-1">${p.Note || '-'}</td>
+                        <td class="border px-2 py-1">
+                            <button data-id="${p.PaymentID}" class="edit-payment text-yellow-600 hover:underline mr-2">تعديل</button>
+                            <button data-id="${p.PaymentID}" class="delete-payment text-red-600 hover:underline">حذف</button>
+                        </td>
+                    </tr>`;
+                });
+            } else {
+                html += '<tr><td colspan="7" class="text-center py-4">لا توجد دفعات يدوية مسجلة.</td></tr>'; // Updated colspan
+            }
+            html += '</tbody></table>';
+            document.getElementById('content').innerHTML = html;
+
+            // Add event listeners for edit/delete buttons
+            document.querySelectorAll('.edit-payment').forEach(btn => btn.addEventListener('click', () => showEditPaymentForm(btn.dataset.id)));
+            document.querySelectorAll('.delete-payment').forEach(btn => btn.addEventListener('click', () => deletePayment(btn.dataset.id)));
+
+        } catch (error) {
+            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل الدفعات: ${error.message}</p>`;
+            console.error("Error loading payments:", error);
+        }
+    }
+    // show add product form
+    function showAddProductForm() {
+      const html = `
+        <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+          <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة منتج جديد</h3>
+          <div id="productMsg" class="mb-4"></div>
+          <form id="productForm" class="space-y-4">
+            <div>
+              <label for="pName" class="block text-sm font-medium text-gray-700 mb-1">اسم المنتج</label>
+              <input type="text" id="pName" name="pName" placeholder="مثال: طماطم بلدي" class="mt-1 block w-full" required />
+            </div>
+            <div>
+              <label for="pCategory" class="block text-sm font-medium text-gray-700 mb-1">الصنف</label>
+              <input type="text" id="pCategory" name="pCategory" placeholder="مثال: خضروات" class="mt-1 block w-full" required />
+            </div>
+            <div>
+              <label for="pStock" class="block text-sm font-medium text-gray-700 mb-1">الكمية الأولية بالمخزن</label>
+              <input type="number" id="pStock" name="pStock" min="0" placeholder="0" value="0" class="mt-1 block w-full" required />
+            </div>
+            <div>
+              <label for="pPrice" class="block text-sm font-medium text-gray-700 mb-1">سعر بيع الوحدة</label>
+              <input type="number" step="0.01" min="0" id="pPrice" name="pPrice" placeholder="0.00" class="mt-1 block w-full" required />
+            </div>
+            <div>
+              <label for="pCost" class="block text-sm font-medium text-gray-700 mb-1">تكلفة شراء الوحدة (متوسط)</label>
+              <input type="number" step="0.01" min="0" id="pCost" name="pCost" placeholder="0.00" class="mt-1 block w-full" />
+            </div>
+             <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+               <button type="button" id="cancelAddProduct" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+               <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ المنتج</button>
+            </div>
+          </form>
+        </div>
+      `;
+      document.getElementById('content').innerHTML = html;
+      document.getElementById('cancelAddProduct')?.addEventListener('click', loadProducts); // Go back
+
+      document.getElementById('productForm')?.addEventListener('submit', async e => {
+        e.preventDefault();
+        const msgDiv = document.getElementById('productMsg');
+        msgDiv.innerHTML = ''; // Clear previous messages
+        const payload = {
+          ProductName: document.getElementById('pName').value.trim(),
+          Category: document.getElementById('pCategory').value.trim(),
+          StockQuantity: +document.getElementById('pStock').value,
+          UnitPrice: +document.getElementById('pPrice').value,
+          UnitCost: document.getElementById('pCost').value ? +document.getElementById('pCost').value : null, // Handle optional cost
+          IsActive: true
+        };
+
+        // Basic validation
+        if (!payload.ProductName || !payload.Category || payload.StockQuantity < 0 || payload.UnitPrice < 0 || (payload.UnitCost !== null && payload.UnitCost < 0)) {
+            msgDiv.innerHTML = '<p class="text-red-600">يرجى ملء الحقول الإجبارية بقيم صحيحة.</p>';
+            return;
+        }
+
+        try {
+          const res = await fetch('http://localhost:3001/api/products', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const data = await res.json();
+          if (res.ok) {
+              loadProducts(); // Reload on success
+          } else {
+              msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء الحفظ.'}</p>`;
+          }
+        } catch (error) {
+            console.error("Error adding product:", error);
+            msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+        }
+      });
+    }
+    // show add trader form
+    function showAddTraderForm() {
+      const html = `
+        <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+          <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة تاجر جديد</h3>
+          <div id="traderMsg" class="mb-4"></div>
+          <form id="traderForm" class="space-y-4">
+            <div>
+                <label for="tName" class="block text-sm font-medium text-gray-700 mb-1">اسم التاجر</label>
+                <input type="text" id="tName" name="tName" placeholder="اسم التاجر بالكامل" class="mt-1 block w-full" required />
+            </div>
+            <div>
+                <label for="tPhone" class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+                <input type="text" id="tPhone" name="tPhone" placeholder="01xxxxxxxxx" class="mt-1 block w-full" />
+            </div>
+             <div>
+                <label for="tAddress" class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
+                <input type="text" id="tAddress" name="tAddress" placeholder="عنوان التاجر (اختياري)" class="mt-1 block w-full" />
+            </div>
+            <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+               <button type="button" id="cancelAddTrader" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+               <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ التاجر</button>
+            </div>
+          </form>
+        </div>
+      `;
+      document.getElementById('content').innerHTML = html;
+      document.getElementById('cancelAddTrader')?.addEventListener('click', loadTraders); // Go back
+
+      document.getElementById('traderForm')?.addEventListener('submit', async e => {
+        e.preventDefault();
+        const msgDiv = document.getElementById('traderMsg');
+        msgDiv.innerHTML = '';
+        const payload = {
+          TraderName: document.getElementById('tName').value.trim(),
+          Phone: document.getElementById('tPhone').value.trim() || null, // Allow empty phone
+          Address: document.getElementById('tAddress').value.trim() || null, // Allow empty address
+          IsActive: true
+        };
+
+        if (!payload.TraderName) {
+            msgDiv.innerHTML = '<p class="text-red-600">اسم التاجر مطلوب.</p>';
+            return;
+        }
+
+        try {
+          const res = await fetch('http://localhost:3001/api/traders', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const data = await res.json();
+          if (res.ok) {
+              loadTraders(); // Reload on success
+          } else {
+              msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء الحفظ.'}</p>`;
+          }
+        } catch(error) {
+             console.error("Error adding trader:", error);
+             msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+        }
+      });
+    }
+    // edit product
+    async function showEditProductForm(id) {
+        try {
+            const res = await fetch(`http://localhost:3001/api/products/${id}`);
+             if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || `Product with ID ${id} not found`);
+            }
+            const p = await res.json();
+
+            const html = `
+            <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+              <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل المنتج #${id}</h3>
+              <div id="productMsg" class="mb-4"></div>
+              <form id="editProductForm" class="space-y-4">
+                <input type="hidden" id="editProductId" value="${p.ProductID}">
+                <div>
+                    <label for="eName" class="block text-sm font-medium text-gray-700 mb-1">اسم المنتج</label>
+                    <input type="text" id="eName" name="eName" value="${p.ProductName}" class="mt-1 block w-full" required />
+                </div>
+                <div>
+                    <label for="eCategory" class="block text-sm font-medium text-gray-700 mb-1">الصنف</label>
+                    <input type="text" id="eCategory" name="eCategory" value="${p.Category}" class="mt-1 block w-full" required />
+                </div>
+                <div>
+                    <label for="eStock" class="block text-sm font-medium text-gray-700 mb-1">الكمية الحالية بالمخزن</label>
+                    <input type="number" id="eStock" name="eStock" min="0" value="${p.StockQuantity}" class="mt-1 block w-full" required />
+                </div>
+                <div>
+                    <label for="ePrice" class="block text-sm font-medium text-gray-700 mb-1">سعر بيع الوحدة</label>
+                    <input type="number" step="0.01" min="0" id="ePrice" name="ePrice" value="${p.UnitPrice}" class="mt-1 block w-full" required />
+                </div>
+                <div>
+                    <label for="eCost" class="block text-sm font-medium text-gray-700 mb-1">تكلفة شراء الوحدة (متوسط)</label>
+                    <input type="number" step="0.01" min="0" id="eCost" name="eCost" value="${p.UnitCost || ''}" placeholder="اتركه فارغاً إذا لم يتغير" class="mt-1 block w-full" />
+                </div>
+                <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+                   <button type="button" id="cancelEditProduct" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                   <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
+                </div>
+              </form>
+            </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+            document.getElementById('cancelEditProduct')?.addEventListener('click', loadProducts); // Go back
+
+            document.getElementById('editProductForm')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                const msgDiv = document.getElementById('productMsg');
+                msgDiv.innerHTML = '';
+                const productId = document.getElementById('editProductId').value;
+                const payload = {
+                    ProductName: document.getElementById('eName').value.trim(),
+                    Category: document.getElementById('eCategory').value.trim(),
+                    StockQuantity: +document.getElementById('eStock').value,
+                    UnitPrice: +document.getElementById('ePrice').value,
+                    UnitCost: document.getElementById('eCost').value ? +document.getElementById('eCost').value : null,
+                    IsActive: true // Assuming we keep it active on edit
+                };
+
+                if (!payload.ProductName || !payload.Category || payload.StockQuantity < 0 || payload.UnitPrice < 0 || (payload.UnitCost !== null && payload.UnitCost < 0)) {
+                    msgDiv.innerHTML = '<p class="text-red-600">يرجى ملء الحقول الإجبارية بقيم صحيحة.</p>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`http://localhost:3001/api/products/${productId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                    const data = await res.json();
+                    if (res.ok) {
+                        loadProducts(); // Reload on success
+                    } else {
+                         msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء التعديل.'}</p>`;
+                    }
+                } catch(error) {
+                    console.error("Error updating product:", error);
+                    msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+                }
+            });
+        } catch (error) {
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات المنتج: ${error.message}</p><button onclick="loadProducts()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المنتجات</button>`;
+             console.error("Error loading product for edit:", error);
+        }
+    }
+    // delete product
+    async function deleteProduct(id) {
+      if (!confirm(`هل أنت متأكد من حذف المنتج رقم ${id}؟ سيؤدي هذا إلى مشاكل في الفواتير والمشتريات المرتبطة به.`)) return;
+      try {
+          const res = await fetch(`http://localhost:3001/api/products/${id}`, { method: 'DELETE' });
+          const data = await res.json();
+           if (res.ok) {
+               alert('تم حذف المنتج بنجاح.');
+               loadProducts(); // Refresh list
+           } else {
+               alert(`فشل حذف المنتج: ${data.error || 'خطأ غير معروف. قد يكون المنتج مستخدماً في فواتير أو مشتريات.'}`);
+           }
+      } catch(error) {
+           console.error("Error deleting product:", error);
+           alert('حدث خطأ أثناء محاولة حذف المنتج.');
+      }
+    }
+    // edit trader
+    async function showEditTraderForm(id) {
+       try {
+            const res = await fetch(`http://localhost:3001/api/traders/${id}`);
+             if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || `Trader with ID ${id} not found`);
+            }
+            const t = await res.json();
+            const html = `
+                <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل بيانات التاجر #${id}</h3>
+                <div id="traderMsg" class="mb-4"></div>
+                <form id="editTraderForm" class="space-y-4">
+                    <input type="hidden" id="editTraderId" value="${t.TraderID}">
+                    <div>
+                        <label for="eName" class="block text-sm font-medium text-gray-700 mb-1">اسم التاجر</label>
+                        <input type="text" id="eName" name="eName" value="${t.TraderName}" class="mt-1 block w-full" required />
+                    </div>
+                    <div>
+                        <label for="ePhone" class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+                        <input type="text" id="ePhone" name="ePhone" value="${t.Phone || ''}" placeholder="01xxxxxxxxx" class="mt-1 block w-full" />
+                    </div>
+                    <div>
+                        <label for="eAddress" class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
+                        <input type="text" id="eAddress" name="eAddress" value="${t.Address || ''}" placeholder="عنوان التاجر (اختياري)" class="mt-1 block w-full" />
+                    </div>
+                    <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+                       <button type="button" id="cancelEditTrader" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                       <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
+                    </div>
+                </form>
+                </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+            document.getElementById('cancelEditTrader')?.addEventListener('click', loadTraders); // Go back
+
+            document.getElementById('editTraderForm')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                const msgDiv = document.getElementById('traderMsg');
+                msgDiv.innerHTML = '';
+                const traderId = document.getElementById('editTraderId').value;
+                const payload = {
+                    TraderName: document.getElementById('eName').value.trim(),
+                    Phone: document.getElementById('ePhone').value.trim() || null,
+                    Address: document.getElementById('eAddress').value.trim() || null,
+                    IsActive: true // Assuming active on edit
+                };
+
+                 if (!payload.TraderName) {
+                    msgDiv.innerHTML = '<p class="text-red-600">اسم التاجر مطلوب.</p>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`http://localhost:3001/api/traders/${traderId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                    const data = await res.json();
+                    if (res.ok) {
+                        loadTraders(); // Reload on success
+                    } else {
+                         msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء التعديل.'}</p>`;
+                    }
+                } catch(error) {
+                     console.error("Error updating trader:", error);
+                     msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+                }
+            });
+
+        } catch (error) {
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات التاجر: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة التجار</button>`;
+             console.error("Error loading trader for edit:", error);
+        }
+    }
+    // delete trader
+    async function deleteTrader(id) {
+      if (!confirm(`هل أنت متأكد من حذف التاجر رقم ${id}؟ سيتم حذف جميع الفواتير والدفعات المرتبطة به!`)) return;
+      try {
+          const res = await fetch(`http://localhost:3001/api/traders/${id}`, { method: 'DELETE' });
+          const data = await res.json();
+           if (res.ok) {
+               alert('تم حذف التاجر وجميع بياناته المرتبطة بنجاح.');
+               loadTraders(); // Refresh list
+           } else {
+                alert(`فشل حذف التاجر: ${data.error || 'خطأ غير معروف.'}`);
+           }
+      } catch(error) {
+           console.error("Error deleting trader:", error);
+           alert('حدث خطأ أثناء محاولة حذف التاجر.');
+      }
+    }
+    // show trader details - Enhanced
+    async function showTraderDetails(id) { // Add flag
+        try {
+            const [traderRes, salesRes, paymentsRes] = await Promise.all([
+                fetch(`http://localhost:3001/api/traders/${id}`),
+                fetch(`http://localhost:3001/api/sales?trader=${id}`), // Fetch sales for this trader
+                fetch(`http://localhost:3001/api/payments?trader=${id}`) // Fetch manual payments for this trader
+            ]);
+
+            if (!traderRes.ok) throw new Error('لم يتم العثور على التاجر');
+            const trader = await traderRes.json();
+            const sales = salesRes.ok ? await salesRes.json() : [];
+            const payments = paymentsRes.ok ? await paymentsRes.json() : [];
+
+            // Calculate Balance (same logic as loadTraders)
+            const totalSalesAmount = sales.reduce((sum, sale) => sum + (sale.TotalAmount || 0), 0);
+            const totalPaidOnSales = sales.reduce((sum, sale) => sum + (sale.PaidAmount || 0), 0);
+            const totalManualPayments = payments.reduce((sum, payment) => sum + (payment.Amount || 0), 0);
+            const balance = (totalManualPayments + totalPaidOnSales) - totalSalesAmount;
+            const balanceClass = balance < 0 ? 'text-red-600' : 'text-green-600';
+            const balanceSign = balance >= 0 ? '+' : '';
+            const balanceValue = Math.abs(balance).toFixed(2);
+
+            let html = `<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">`;
+            html += `<div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-semibold text-gray-800">تفاصيل التاجر: ${trader.TraderName}</h3>
+                        <button id="backToTradersBtn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لقائمة التجار</button>
+                     </div>`;
+
+            // Trader Info Section
+            html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-b pb-4">
+                        <div><strong class="text-gray-600">ID:</strong> ${trader.TraderID}</div>
+                        <div><strong class="text-gray-600">الاسم:</strong> ${trader.TraderName}</div>
+                        <div><strong class="text-gray-600">الهاتف:</strong> ${trader.Phone || '-'}</div>
+                        <div><strong class="text-gray-600">العنوان:</strong> ${trader.Address || '-'}</div>
+                        <div><strong class="text-gray-600">إجمالي المبيعات:</strong> ${totalSalesAmount.toFixed(2)}</div>
+                        <div><strong class="text-gray-600">إجمالي المدفوع (فواتير + يدوي):</strong> ${(totalPaidOnSales + totalManualPayments).toFixed(2)}</div>
+                        <div class="md:col-span-2"><strong class="text-gray-600">الرصيد الحالي:</strong> <span class="font-bold ${balanceClass}">${balanceSign}${balanceValue}</span></div>
+                     </div>`;
+
+            // Add Manual Payment Form Section
+            html += `<div class="mt-6 mb-6 p-4 bg-gray-50 rounded border border-gray-200">
+                        <h4 class="text-lg font-semibold mb-3 text-gray-700">إضافة دفعة يدوية لهذا التاجر</h4>
+                        <div id="manualPaymentMsg" class="mb-3"></div>
+                        <form id="manualPaymentForm" class="space-y-3">
+                        <input type="hidden" id="manualTraderId" value="${trader.TraderID}">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="manualPaymentAmount" class="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
+                                <input type="number" step="0.01" min="0.01" id="manualPaymentAmount" placeholder="0.00" class="w-full" required />
+                            </div>
+                            <div>
+                                <label for="manualPaymentDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الدفعة</label>
+                                <input type="date" id="manualPaymentDate" value="${new Date().toISOString().split('T')[0]}" class="w-full" required />
+                            </div>
+                            <div class="md:col-span-3">
+                                <label for="manualPaymentNote" class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                                <textarea id="manualPaymentNote" rows="2" placeholder="سبب الدفعة أو أي تفاصيل أخرى" class="w-full"></textarea>
+                            </div>
+                        </div>
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">إضافة الدفعة</button>
+                        </div>
+                        </form>
+                    </div>`;
+
+            // Sales History Section
+            html += `<div class="mt-6 mb-6">
+                        <h4 class="text-lg font-semibold mb-3 text-gray-700">سجل الفواتير</h4>`;
+            if (sales.length > 0) {
+                html += `<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الفاتورة</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th><th class="border px-2 py-1">المدفوع</th><th class="border px-2 py-1">المتبقي</th><th class="border px-2 py-1">عرض</th></tr></thead><tbody>`;
+                // Sort sales by date descending
+                sales.sort((a, b) => new Date(b.SaleDate) - new Date(a.SaleDate));
+                sales.forEach(s => {
+                    html += `<tr class="table-row"><td class="border px-2 py-1">${s.SaleID}</td><td class="border px-2 py-1">${formatDate(s.SaleDate)}</td><td class="border px-2 py-1">${s.TotalAmount.toFixed(2)}</td><td class="border px-2 py-1">${s.PaidAmount.toFixed(2)}</td><td class="border px-2 py-1">${s.RemainingAmount.toFixed(2)}</td><td class="border px-2 py-1"><button class="view-sale-detail text-blue-600 hover:underline" data-id="${s.SaleID}">التفاصيل</button></td></tr>`;
+                });
+                html += `</tbody></table>`;
+            } else {
+                html += `<p class="text-gray-500">لا توجد فواتير مسجلة لهذا التاجر.</p>`;
+            }
+            html += `</div>`;
+
+            // Manual Payments History Section
+            html += `<div class="mt-6">
+                        <h4 class="text-lg font-semibold mb-3 text-gray-700">سجل الدفعات اليدوية</h4>`;
+             if (payments.length > 0) {
+                html += `<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الدفعة</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">ملاحظات</th></tr></thead><tbody>`;
+                 // Sort payments by date descending
+                payments.sort((a, b) => new Date(b.PaymentDate) - new Date(a.PaymentDate));
+                payments.forEach(p => {
+                    html += `<tr class="table-row"><td class="border px-2 py-1">${p.PaymentID}</td><td class="border px-2 py-1">${formatDate(p.PaymentDate)}</td><td class="border px-2 py-1">${p.Amount.toFixed(2)}</td><td class="border px-2 py-1">${p.Note || '-'}</td></tr>`;
+                });
+                html += `</tbody></table>`;
+            } else {
+                html += `<p class="text-gray-500">لا توجد دفعات يدوية مسجلة لهذا التاجر.</p>`;
+            }
+            html += `</div>`;
+
+
+            html += `</div>`; // Close main container
+            document.getElementById('content').innerHTML = html;
+
+            // Event Listener for Back Button
+            document.getElementById('backToTradersBtn')?.addEventListener('click', loadTraders);
+
+            // Event Listener for View Sale Detail Button (within trader details)
+            document.querySelectorAll('.view-sale-detail').forEach(btn => {
+                 btn.addEventListener('click', () => showSaleDetails(btn.dataset.id, true)); // Pass flag to show back button to trader details
+             });
+
+            // Handle manual payment form submission
+            document.getElementById('manualPaymentForm')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                const msgDiv = document.getElementById('manualPaymentMsg');
+                msgDiv.innerHTML = '';
+                const traderIdInput = document.getElementById('manualTraderId');
+                const amountInput = document.getElementById('manualPaymentAmount');
+                const dateInput = document.getElementById('manualPaymentDate');
+                const noteInput = document.getElementById('manualPaymentNote');
+
+                const payload = {
+                    TraderID: traderIdInput.value,
+                    Amount: parseFloat(amountInput.value),
+                    PaymentDate: dateInput.value, // Already in YYYY-MM-DD
+                    Note: noteInput.value.trim()
+                };
+
+                if (!payload.TraderID || isNaN(payload.Amount) || payload.Amount <= 0 || !payload.PaymentDate) {
+                     msgDiv.innerHTML = '<p class="text-red-600">يرجى إدخال مبلغ وتاريخ صحيحين.</p>';
+                     return;
+                }
+
+                try {
+                    const res = await fetch('http://localhost:3001/api/payments', { // Use the correct endpoint
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await res.json();
+                    if (res.ok) {
+                        msgDiv.innerHTML = '<p class="text-green-600">تم إضافة الدفعة بنجاح. سيتم تحديث التفاصيل.</p>';
+                        // Reset form and reload details after a short delay
+                        document.getElementById('manualPaymentForm').reset();
+                         // Set date back to today
+                        document.getElementById('manualPaymentDate').value = new Date().toISOString().split('T')[0];
+                        setTimeout(() => showTraderDetails(id), 1500); // Reload trader details
+                    } else {
+                        msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'خطأ في إضافة الدفعة'}</p>`;
+                    }
+                } catch (error) {
+                     console.error("Error adding manual payment:", error);
+                     msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+                }
+            });
+
+        } catch (error) {
+            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل تفاصيل التاجر: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة التجار</button>`;
+            console.error("Error showing trader details:", error);
+        }
+    }
+
+    // Function to show manual payment form (can be standalone or integrated as above)
+    async function showManualPaymentForm(traderId) {
+        try {
+            // Optional: Fetch trader name to display
+            const traderRes = await fetch(`http://localhost:3001/api/traders/${traderId}`);
+            const trader = traderRes.ok ? await traderRes.json() : { TraderName: `تاجر #${traderId}`};
+
+            const html = `
+            <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة دفعة يدوية للتاجر: ${trader.TraderName}</h3>
+                <div id="manualPaymentMsg" class="mb-4"></div>
+                <form id="manualPaymentFormStandalone" class="space-y-4">
+                    <input type="hidden" id="manualTraderId" value="${traderId}">
+                    <div>
+                        <label for="manualPaymentAmount" class="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
+                        <input type="number" step="0.01" min="0.01" id="manualPaymentAmount" placeholder="0.00" class="w-full" required />
+                    </div>
+                    <div>
+                        <label for="manualPaymentDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الدفعة</label>
+                        <input type="date" id="manualPaymentDate" value="${new Date().toISOString().split('T')[0]}" class="w-full" required />
+                    </div>
+                    <div>
+                        <label for="manualPaymentNote" class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                        <textarea id="manualPaymentNote" rows="3" placeholder="سبب الدفعة أو أي تفاصيل أخرى" class="w-full"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+                       <button type="button" id="cancelManualPayment" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                       <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">إضافة الدفعة</button>
+                    </div>
+                </form>
+            </div>`;
+            document.getElementById('content').innerHTML = html;
+
+            document.getElementById('cancelManualPayment')?.addEventListener('click', loadTraders); // Go back to traders list
+
+             // Handle manual payment form submission
+            document.getElementById('manualPaymentFormStandalone')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                // (Same submission logic as in showTraderDetails)
+                 const msgDiv = document.getElementById('manualPaymentMsg');
+                msgDiv.innerHTML = '';
+                const traderIdInput = document.getElementById('manualTraderId');
+                const amountInput = document.getElementById('manualPaymentAmount');
+                const dateInput = document.getElementById('manualPaymentDate');
+                const noteInput = document.getElementById('manualPaymentNote');
+
+                const payload = {
+                    TraderID: traderIdInput.value,
+                    Amount: parseFloat(amountInput.value),
+                    PaymentDate: dateInput.value,
+                    Note: noteInput.value.trim()
+                };
+
+                if (!payload.TraderID || isNaN(payload.Amount) || payload.Amount <= 0 || !payload.PaymentDate) {
+                     msgDiv.innerHTML = '<p class="text-red-600">يرجى إدخال مبلغ وتاريخ صحيحين.</p>';
+                     return;
+                }
+
+                try {
+                    const res = await fetch('http://localhost:3001/api/payments', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await res.json();
+                    if (res.ok) {
+                        msgDiv.innerHTML = '<p class="text-green-600">تم إضافة الدفعة بنجاح.</p>';
+                        // Optionally redirect back to traders list after success
+                        setTimeout(loadTraders, 1500);
+                    } else {
+                        msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'خطأ في إضافة الدفعة'}</p>`;
+                    }
+                } catch (error) {
+                     console.error("Error adding manual payment:", error);
+                     msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+                }
+            });
+
+        } catch (error) {
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات التاجر: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة التجار</button>`;
+             console.error("Error preparing manual payment form:", error);
+        }
+    }
+    // --- Edit Payment Form ---
+    async function showEditPaymentForm(paymentId) {
+        try {
+            const res = await fetch(`http://localhost:3001/api/payments/${paymentId}`);
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || `Payment with ID ${paymentId} not found`);
+            }
+            const payment = await res.json();
+
+            // Fetch trader name for display
+            let traderName = `تاجر #${payment.TraderID}`;
+            try {
+                const traderRes = await fetch(`http://localhost:3001/api/traders/${payment.TraderID}`);
+                if (traderRes.ok) {
+                    const trader = await traderRes.json();
+                    traderName = trader.TraderName;
+                }
+            } catch { /* Ignore error, just use default name */ }
+
+
+            const html = `
+            <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل الدفعة #${paymentId} للتاجر: ${traderName}</h3>
+                <div id="paymentMsg" class="mb-4"></div>
+                <form id="editPaymentForm" class="space-y-4">
+                    <input type="hidden" id="editPaymentId" value="${payment.PaymentID}">
+                    <input type="hidden" id="editTraderId" value="${payment.TraderID}">
+                    <div>
+                        <label for="editPaymentAmount" class="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
+                        <input type="number" step="0.01" min="0.01" id="editPaymentAmount" value="${payment.Amount}" class="w-full" required />
+                    </div>
+                    <div>
+                        <label for="editPaymentDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الدفعة</label>
+                        <input type="date" id="editPaymentDate" value="${formatDateForInput(payment.PaymentDate)}" class="w-full" required />
+                    </div>
+                    <div>
+                        <label for="editPaymentNote" class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                        <textarea id="editPaymentNote" rows="3" class="w-full">${payment.Note || ''}</textarea>
+                    </div>
+                    <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+                       <button type="button" id="cancelEditPayment" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                       <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
+                    </div>
+                </form>
+            </div>`;
+            document.getElementById('content').innerHTML = html;
+
+            document.getElementById('cancelEditPayment')?.addEventListener('click', loadPayments); // Go back to payments list
+
+            document.getElementById('editPaymentForm')?.addEventListener('submit', async e => {
+                 e.preventDefault();
+                 const msgDiv = document.getElementById('paymentMsg');
+                 msgDiv.innerHTML = '';
+                 const payId = document.getElementById('editPaymentId').value;
+                 const payload = {
+                    TraderID: document.getElementById('editTraderId').value, // Keep original TraderID
+                    Amount: parseFloat(document.getElementById('editPaymentAmount').value),
+                    PaymentDate: document.getElementById('editPaymentDate').value,
+                    Note: document.getElementById('editPaymentNote').value.trim()
+                 };
+
+                 if (isNaN(payload.Amount) || payload.Amount <= 0 || !payload.PaymentDate) {
+                     msgDiv.innerHTML = '<p class="text-red-600">يرجى إدخال مبلغ وتاريخ صحيحين.</p>';
+                     return;
+                 }
+
+                 try {
+                    const res = await fetch(`http://localhost:3001/api/payments/${payId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        msgDiv.innerHTML = '<p class="text-green-600">تم تعديل الدفعة بنجاح.</p>';
+                        setTimeout(loadPayments, 1500); // Go back to list
+                    } else {
+                         msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'خطأ في تعديل الدفعة'}</p>`;
+                    }
+                 } catch (error) {
+                     console.error("Error updating payment:", error);
+                     msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+                 }
+            });
+
+        } catch (error) {
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات الدفعة: ${error.message}</p><button onclick="loadPayments()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة الدفعات</button>`;
+             console.error("Error loading payment for edit:", error);
+        }
+    }
+
+    // --- Delete Payment ---
+    async function deletePayment(paymentId) {
+        if (!confirm(`هل أنت متأكد من حذف الدفعة رقم ${paymentId}؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
+        try {
+            const res = await fetch(`http://localhost:3001/api/payments/${paymentId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok) {
+                alert('تم حذف الدفعة بنجاح.');
+                loadPayments(); // Refresh list
+            } else {
+                 alert(`فشل حذف الدفعة: ${data.error || 'خطأ غير معروف.'}`);
+            }
+        } catch(error) {
+            console.error("Error deleting payment:", error);
+            alert('حدث خطأ أثناء محاولة حذف الدفعة.');
+        }
+    }
+
+    // show create sale form
+    async function showAddSaleForm() {
+      try {
+        const [trRes, prodRes] = await Promise.all([
+            fetch('http://localhost:3001/api/traders?active=true'), // Fetch only active traders
+            fetch('http://localhost:3001/api/products?active=true') // Fetch only active products
+        ]);
+        if (!trRes.ok || !prodRes.ok) {
+            throw new Error('فشل تحميل بيانات التجار أو المنتجات');
+        }
+        const [traders, products] = await Promise.all([trRes.json(), prodRes.json()]);
+
+        let html = `
+            <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+            <h3 class="text-xl font-semibold mb-6 text-gray-700">إنشاء فاتورة جديدة</h3>
+            <div id="saleMsg" class="mb-4"></div>
+            <form id="saleForm" class="space-y-4">
+                <div>
+                    <label for="sTrader" class="block text-sm font-medium text-gray-700 mb-1">التاجر</label>
+                    <select id="sTrader" name="sTrader" class="w-full" required>
+                    <option value="">-- اختر تاجر --</option>`;
+        traders.forEach(t => { html += `<option value="${t.TraderID}">${t.TraderName}</option>`; });
+        html += `
+                    </select>
+                </div>
+                <div>
+                    <label for="sDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الفاتورة</label>
+                    <input type="date" id="sDate" name="sDate" value="${new Date().toISOString().split('T')[0]}" class="w-full" required />
+                </div>
+
+                <fieldset class="border p-4 rounded mt-4">
+                    <legend class="text-lg font-medium text-gray-700 px-2">المنتجات</legend>
+                    <div id="productRows" class="space-y-3 mt-2">
+                    <!-- Product Row Template (will be added dynamically) -->
+                    </div>
+                    <button id="addProductRowBtn" type="button" class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">+ إضافة منتج آخر</button>
+                </fieldset>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                    <div>
+                        <label for="sPaid" class="block text-sm font-medium text-gray-700 mb-1">المبلغ المدفوع</label>
+                        <input id="sPaid" name="sPaid" type="number" step="0.01" min="0" value="0" placeholder="0.00" class="w-full" />
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الإجمالي المتوقع</label>
+                        <div id="saleTotalDisplay" class="mt-1 block w-full p-2 bg-gray-100 rounded border border-gray-300 text-center font-bold">0.00</div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 space-x-reverse pt-6">
+                    <button type="button" id="cancelAddSale" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ الفاتورة</button>
+                </div>
+            </form>
+            </div>`;
+        document.getElementById('content').innerHTML = html;
+
+        let productRowCount = 0;
+        const productRowsContainer = document.getElementById('productRows');
+        const saleTotalDisplay = document.getElementById('saleTotalDisplay');
+
+        // Function to add a new product row
+        const addProductRow = () => {
+            const rowId = productRowCount++;
+            const div = document.createElement('div');
+            div.className = 'flex items-center space-x-2 border-b border-gray-200 pb-2 sale-product-row';
+            div.dataset.rowId = rowId;
+
+            // Product Select
+            const sel = document.createElement('select');
+            sel.className = 'flex-grow'; // Use flex-grow instead of flex-1
+            sel.id = `sProduct${rowId}`;
+            sel.name = `sProduct${rowId}`;
+            sel.required = true;
+            sel.innerHTML = '<option value="">-- اختر منتج --</option>';
+            products.forEach(p => {
+                sel.innerHTML += `<option value="${p.ProductID}" data-price="${p.UnitPrice}" data-stock="${p.StockQuantity}">${p.ProductName} (متوفر: ${p.StockQuantity}, سعر: ${p.UnitPrice.toFixed(2)})</option>`;
+            });
+            sel.addEventListener('change', () => {
+                 updateSaleTotal();
+                 // Check stock on change
+                 const qtyInput = document.getElementById(`sQuantity${rowId}`);
+                 checkStock(sel, qtyInput);
+             });
+
+            // Quantity Input
+            const inp = document.createElement('input');
+            inp.type = 'number';
+            inp.min = 1;
+            inp.placeholder = 'الكمية';
+            inp.id = `sQuantity${rowId}`;
+            inp.name = `sQuantity${rowId}`;
+            inp.className = 'w-24'; // Fixed width for quantity
+            inp.required = true;
+            inp.addEventListener('input', () => {
+                updateSaleTotal();
+                checkStock(sel, inp); // Check stock on quantity change
+            });
+
+
+            // Price Display (Read-only)
+            const priceDisplay = document.createElement('span');
+            priceDisplay.id = `sPriceDisplay${rowId}`;
+            priceDisplay.className = 'text-sm text-gray-500 w-20 text-center'; // Fixed width
+            priceDisplay.textContent = 'سعر: -';
+
+            // Remove Button
+            const rm = document.createElement('button');
+            rm.type = 'button';
+            rm.textContent = '×';
+            rm.className = 'text-red-500 hover:text-red-700 font-bold px-2';
+            rm.addEventListener('click', () => {
+                div.remove();
+                updateSaleTotal();
+            });
+
+            div.append(sel, inp, rm); // Add elements to the row div
+            productRowsContainer.append(div); // Add the row div to the container
+            updateSaleTotal(); // Update total when a new row is added
+        };
+
+        // Function to update sale total display
+        const updateSaleTotal = () => {
+            let total = 0;
+            document.querySelectorAll('.sale-product-row').forEach(row => {
+                const rowId = row.dataset.rowId;
+                const productSelect = document.getElementById(`sProduct${rowId}`);
+                const quantityInput = document.getElementById(`sQuantity${rowId}`);
+                if (productSelect && productSelect.value && quantityInput && quantityInput.value) {
+                    const selectedOption = productSelect.options[productSelect.selectedIndex];
+                    const price = parseFloat(selectedOption.dataset.price);
+                    const quantity = parseInt(quantityInput.value);
+                    if (!isNaN(price) && !isNaN(quantity) && quantity > 0) {
+                        total += price * quantity;
+                    }
+                }
+            });
+            saleTotalDisplay.textContent = total.toFixed(2);
+        };
+
+        // Function to check stock and provide visual feedback
+        const checkStock = (productSelect, quantityInput) => {
+            const selectedOption = productSelect.options[productSelect.selectedIndex];
+            const stock = parseInt(selectedOption?.dataset.stock);
+            const quantity = parseInt(quantityInput.value);
+            const msgDiv = document.getElementById('saleMsg'); // Use the main message div
+
+             // Clear previous border styles
+            quantityInput.classList.remove('border-red-500', 'ring-red-500');
+
+            if (selectedOption && !isNaN(stock) && !isNaN(quantity) && quantity > stock) {
+                quantityInput.classList.add('border-red-500', 'ring', 'ring-red-500', 'ring-opacity-50'); // Add red border/ring
+                 msgDiv.innerHTML = `<p class="text-red-600">الكمية المطلوبة للمنتج "${selectedOption.text.split(' (')[0]}" (${quantity}) تتجاوز الكمية المتاحة بالمخزن (${stock}).</p>`;
+                 return false; // Indicate stock issue
+            } else {
+                 //msgDiv.innerHTML = ''; // Clear message if stock is okay for this item (careful not to clear other messages)
+                 // You might want a more sophisticated message handling system if multiple errors can occur
+                 return true; // Indicate stock is OK
+            }
+        };
+
+
+        // Add the first product row initially
+        addProductRow();
+
+        // Event listener for adding more product rows
+        document.getElementById('addProductRowBtn')?.addEventListener('click', addProductRow);
+        document.getElementById('cancelAddSale')?.addEventListener('click', loadSales); // Go back
+
+        // Event listener for form submission
+        document.getElementById('saleForm')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const msgDiv = document.getElementById('saleMsg');
+            msgDiv.innerHTML = ''; // Clear previous messages
+            const TraderID = +document.getElementById('sTrader').value;
+            const SaleDate = document.getElementById('sDate').value;
+            const PaidAmount = +document.getElementById('sPaid').value || 0;
+            const prods = [];
+            let stockIssue = false;
+
+            document.querySelectorAll('.sale-product-row').forEach(row => {
+                const rowId = row.dataset.rowId;
+                const ps = document.getElementById(`sProduct${rowId}`);
+                const qs = document.getElementById(`sQuantity${rowId}`);
+
+                if (ps && ps.value && qs && qs.value) {
+                    const selectedOption = ps.options[ps.selectedIndex];
+                    const stock = +selectedOption.dataset.stock;
+                    const quantity = +qs.value;
+                    const unitPrice = +selectedOption.dataset.price; // Use actual price from selection
+
+                     if (quantity > stock) {
+                        stockIssue = true;
+                        checkStock(ps, qs); // Re-run check to highlight the problematic input
+                    }
+
+                    prods.push({
+                        ProductID: +ps.value,
+                        Quantity: quantity,
+                        UnitPrice: unitPrice, // Use the actual price at time of selection
+                        // UnitCost might not be needed here directly, but good to fetch if profit calc is done later
+                    });
+                }
+            });
+
+            if (!TraderID || !SaleDate) {
+                msgDiv.innerHTML = '<p class="text-red-600">يرجى اختيار تاجر وتحديد تاريخ الفاتورة.</p>';
+                return;
+            }
+            if (prods.length === 0) {
+                msgDiv.innerHTML = '<p class="text-red-600">يرجى إضافة منتج واحد على الأقل للفاتورة.</p>';
+                return;
+            }
+             if (stockIssue) {
+                // Message is already displayed by checkStock
+                msgDiv.innerHTML = '<p class="text-red-600">يوجد خطأ في الكميات المطلوبة (تجاوز المخزون). يرجى المراجعة.</p>';
+                return;
+            }
+
+            // Calculate total amount from the collected products
+            const totalAmount = prods.reduce((sum, p) => sum + (p.Quantity * p.UnitPrice), 0);
+
+            if (PaidAmount > totalAmount) {
+                 msgDiv.innerHTML = `<p class="text-red-600">المبلغ المدفوع (${PaidAmount.toFixed(2)}) لا يمكن أن يكون أكبر من إجمالي الفاتورة (${totalAmount.toFixed(2)}).</p>`;
+                 return;
+            }
+
+            try {
+                const payload = {
+                    TraderID,
+                    SaleDate,
+                    PaidAmount,
+                    products: prods
+                };
+                console.log("Sending Sale Payload:", JSON.stringify(payload)); // Log payload
+
+                const res = await fetch('http://localhost:3001/api/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                console.log("Sale Response:", data); // Log response
+
+                if (res.ok) {
+                    loadSales(); // Reload sales list on success
+                } else {
+                    msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ غير متوقع أثناء حفظ الفاتورة.'}</p>`;
+                }
+            } catch (error) {
+                 console.error("Error submitting sale:", error);
+                 msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم لحفظ الفاتورة.</p>';
+            }
+        });
+
+       } catch (error) {
+           document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحضير نموذج الفاتورة: ${error.message}</p><button onclick="loadSales()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة الفواتير</button>`;
+           console.error("Error preparing add sale form:", error);
+       }
+    }
+    // Show sale details
+    async function showSaleDetails(id, fromTraderDetails = false) { // Add flag
+      try {
+        const res = await fetch(`http://localhost:3001/api/sales/${id}`);
+        if (!res.ok) {
+             const errData = await res.json();
+             throw new Error(errData.error || `Sale with ID ${id} not found`);
+        }
+        const s = await res.json();
+
+        let html = `<div class="max-w-2xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">`;
+         html += `<div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-semibold text-gray-800">تفاصيل الفاتورة #${s.SaleID}</h3>`;
+         // Conditional Back Button
+         if (fromTraderDetails && s.TraderID) {
+             html += `<button onclick="showTraderDetails(${s.TraderID})" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لتفاصيل التاجر</button>`;
+         } else {
+             html += `<button id="backToSalesBtn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لقائمة الفواتير</button>`;
+         }
+         html += `</div>`;
+
+        // Sale Summary
+        html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-b pb-4">
+                    <div><strong class="text-gray-600">التاجر:</strong> ${s.trader?.TraderName || 'غير محدد'}</div>
+                    <div><strong class="text-gray-600">تاريخ الفاتورة:</strong> ${formatDate(s.SaleDate)}</div>
+                    <div><strong class="text-gray-600">الإجمالي:</strong> ${s.TotalAmount.toFixed(2)}</div>
+                    <div><strong class="text-gray-600">المدفوع:</strong> ${s.PaidAmount.toFixed(2)}</div>
+                    <div class="md:col-span-2"><strong class="text-gray-600">المتبقي:</strong> <span class="font-bold ${s.RemainingAmount > 0 ? 'text-red-600' : 'text-green-600'}">${s.RemainingAmount.toFixed(2)}</span></div>
+                 </div>`;
+
+        // Sale Details (Products)
+        html += `<h4 class="mt-4 mb-3 font-semibold text-lg text-gray-700">المنتجات في الفاتورة</h4>`;
+        if(s.details && s.details.length > 0) {
+            html += `<table class="min-w-full bg-white border">
+                        <thead>
+                            <tr>
+                                <th class="border px-2 py-1 text-right">المنتج</th>
+                                <th class="border px-2 py-1 text-center">سعر الوحدة</th>
+                                <th class="border px-2 py-1 text-center">الكمية</th>
+                                <th class="border px-2 py-1 text-center">المجموع الفرعي</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            s.details.forEach(d => {
+                html += `<tr class="table-row">
+                            <td class="border px-2 py-1">${d.ProductName || 'منتج محذوف'}</td>
+                            <td class="border px-2 py-1 text-center">${d.UnitPrice.toFixed(2)}</td>
+                            <td class="border px-2 py-1 text-center">${d.Quantity}</td>
+                            <td class="border px-2 py-1 text-center">${d.SubTotal.toFixed(2)}</td>
+                         </tr>`;
+            });
+            html += `</tbody></table>`;
+        } else {
+            html += `<p class="text-gray-500">لا توجد تفاصيل منتجات لهذه الفاتورة.</p>`;
+        }
+        html += '</div>'; // Close main container
+
+        document.getElementById('content').innerHTML = html;
+        // Add event listener only if the general back button exists
+        document.getElementById('backToSalesBtn')?.addEventListener('click', loadSales);
+
+      } catch (e) {
+        document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في عرض تفاصيل الفاتورة: ${e.message}</p><button onclick="loadSales()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة الفواتير</button>`;
+        console.error("Error showing sale details:", e);
+      }
+    }
+    // Delete sale
+    async function deleteSale(id) {
+      if (!confirm(`هل أنت متأكد من حذف الفاتورة رقم ${id}؟ سيتم استرجاع كميات المنتجات للمخزن وتحديث رصيد التاجر.`)) return;
+      try {
+        const res = await fetch(`http://localhost:3001/api/sales/${id}`, { method: 'DELETE' });
+        const data = await res.json(); // Get response body even on error
+        if (res.ok) {
+            alert('تم حذف الفاتورة بنجاح.');
+            loadSales(); // Refresh list
+        } else {
+            alert(`فشل حذف الفاتورة: ${data.error || 'خطأ غير معروف.'}`);
+        }
+      } catch(error) {
+          console.error("Error deleting sale:", error);
+          alert('حدث خطأ أثناء محاولة حذف الفاتورة.');
+      }
+    }
+    // Show edit sale form
+    async function showEditSaleForm(id) {
+        try {
+            const [sRes, trRes, prodRes] = await Promise.all([
+                fetch(`http://localhost:3001/api/sales/${id}`),
+                fetch('http://localhost:3001/api/traders?active=true'),
+                fetch('http://localhost:3001/api/products?active=true')
+            ]);
+
+            if (!sRes.ok) throw new Error('لم يتم العثور على الفاتورة');
+            if (!trRes.ok || !prodRes.ok) throw new Error('فشل تحميل بيانات التجار أو المنتجات');
+
+            const s = await sRes.json();
+            const traders = await trRes.json();
+            const products = await prodRes.json();
+
+            let html = `<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل الفاتورة #${s.SaleID}</h3>
+                <div id="saleMsg" class="mb-4"></div>
+                <form id="editSaleForm" class="space-y-4">
+                    <input type="hidden" id="editSaleId" value="${s.SaleID}">
+                     <div>
+                        <label for="sTrader" class="block text-sm font-medium text-gray-700 mb-1">التاجر</label>
+                        <select id="sTrader" name="sTrader" class="w-full" required>
+                            <option value="">-- اختر تاجر --</option>`;
+            traders.forEach(t => { html += `<option value="${t.TraderID}"${t.TraderID === s.TraderID ? ' selected' : ''}>${t.TraderName}</option>`; });
+            html += `
+                        </select>
+                    </div>
+                     <div>
+                        <label for="sDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الفاتورة</label>
+                        <input type="date" id="sDate" name="sDate" value="${formatDateForInput(s.SaleDate)}" class="w-full" required />
+                    </div>
+
+                     <fieldset class="border p-4 rounded mt-4">
+                        <legend class="text-lg font-medium text-gray-700 px-2">المنتجات</legend>
+                        <div id="productRows" class="space-y-3 mt-2">
+                        <!-- Existing product rows will be added here -->
+                        </div>
+                        <button id="addProductRowBtn" type="button" class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">+ إضافة منتج آخر</button>
+                    </fieldset>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                        <div>
+                            <label for="sPaid" class="block text-sm font-medium text-gray-700 mb-1">المبلغ المدفوع</label>
+                            <input id="sPaid" name="sPaid" type="number" step="0.01" min="0" value="${s.PaidAmount}" placeholder="0.00" class="w-full" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">الإجمالي المتوقع</label>
+                            <div id="saleTotalDisplay" class="mt-1 block w-full p-2 bg-gray-100 rounded border border-gray-300 text-center font-bold">0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-2 space-x-reverse pt-6">
+                        <button type="button" id="cancelEditSale" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
+                    </div>
+                </form>
+            </div>`;
+            document.getElementById('content').innerHTML = html;
+
+            let productRowCount = 0;
+            const productRowsContainer = document.getElementById('productRows');
+            const saleTotalDisplay = document.getElementById('saleTotalDisplay');
+
+            // Function to add a product row (same as in add form, but can take existing data)
+            const addProductRow = (detail = null) => {
+                const rowId = productRowCount++;
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-2 border-b border-gray-200 pb-2 sale-product-row';
+                div.dataset.rowId = rowId;
+                div.dataset.detailId = detail ? detail.SaleDetailID : ''; // Store original detail ID if editing
+
+                const sel = document.createElement('select');
+                sel.className = 'flex-grow';
+                sel.id = `sProduct${rowId}`;
+                sel.name = `sProduct${rowId}`;
+                sel.required = true;
+                sel.innerHTML = '<option value="">-- اختر منتج --</option>';
+                products.forEach(p => {
+                    const isSelected = detail && p.ProductID === detail.ProductID;
+                    sel.innerHTML += `<option value="${p.ProductID}" data-price="${p.UnitPrice}" data-stock="${p.StockQuantity}"${isSelected ? ' selected' : ''}>${p.ProductName} (متوفر: ${p.StockQuantity}, سعر: ${p.UnitPrice.toFixed(2)})</option>`;
+                });
+                 sel.addEventListener('change', () => {
+                     updateSaleTotal();
+                     const qtyInput = document.getElementById(`sQuantity${rowId}`);
+                     checkStock(sel, qtyInput);
+                 });
+
+                const inp = document.createElement('input');
+                inp.type = 'number';
+                inp.min = 1;
+                inp.placeholder = 'الكمية';
+                inp.id = `sQuantity${rowId}`;
+                inp.name = `sQuantity${rowId}`;
+                inp.className = 'w-24';
+                inp.required = true;
+                inp.value = detail ? detail.Quantity : '';
+                inp.addEventListener('input', () => {
+                    updateSaleTotal();
+                     checkStock(sel, inp);
+                });
+
+                const rm = document.createElement('button');
+                rm.type = 'button';
+                rm.textContent = '×';
+                rm.className = 'text-red-500 hover:text-red-700 font-bold px-2';
+                rm.addEventListener('click', () => {
+                    div.remove();
+                    updateSaleTotal();
+                });
+
+                div.append(sel, inp, rm);
+                productRowsContainer.append(div);
+            };
+
+            // Function to update total (same as add form)
+             const updateSaleTotal = () => {
+                 let total = 0;
+                 document.querySelectorAll('.sale-product-row').forEach(row => {
+                    const rowId = row.dataset.rowId;
+                    const productSelect = document.getElementById(`sProduct${rowId}`);
+                    const quantityInput = document.getElementById(`sQuantity${rowId}`);
+                     if (productSelect && productSelect.value && quantityInput && quantityInput.value) {
+                        const selectedOption = productSelect.options[productSelect.selectedIndex];
+                        const price = parseFloat(selectedOption.dataset.price);
+                        const quantity = parseInt(quantityInput.value);
+                         if (!isNaN(price) && !isNaN(quantity) && quantity > 0) {
+                            total += price * quantity;
+                        }
+                    }
+                });
+                saleTotalDisplay.textContent = total.toFixed(2);
+            };
+
+            // Function to check stock (same as add form)
+             const checkStock = (productSelect, quantityInput) => {
+                const selectedOption = productSelect.options[productSelect.selectedIndex];
+                const stock = parseInt(selectedOption?.dataset.stock);
+                const quantity = parseInt(quantityInput.value);
+                const msgDiv = document.getElementById('saleMsg');
+
+                quantityInput.classList.remove('border-red-500', 'ring-red-500');
+
+                if (selectedOption && !isNaN(stock) && !isNaN(quantity) && quantity > stock) {
+                    quantityInput.classList.add('border-red-500', 'ring', 'ring-red-500', 'ring-opacity-50');
+                    msgDiv.innerHTML = `<p class="text-red-600">الكمية المطلوبة للمنتج "${selectedOption.text.split(' (')[0]}" (${quantity}) تتجاوز الكمية المتاحة (${stock}).</p>`;
+                    return false;
+                } else {
+                    // Potentially clear message if needed, but be cautious
+                    return true;
+                }
+            };
+
+
+            // Populate existing product rows
+            s.details.forEach(detail => addProductRow(detail));
+            updateSaleTotal(); // Calculate initial total
+
+            // Add event listeners
+            document.getElementById('addProductRowBtn')?.addEventListener('click', () => addProductRow()); // Add empty row
+            document.getElementById('cancelEditSale')?.addEventListener('click', loadSales); // Go back
+
+            // Handle form submission
+            document.getElementById('editSaleForm')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                const msgDiv = document.getElementById('saleMsg');
+                msgDiv.innerHTML = '';
+
+                const saleId = document.getElementById('editSaleId').value;
+                const TraderID = +document.getElementById('sTrader').value;
+                const SaleDate = document.getElementById('sDate').value;
+                const PaidAmount = +document.getElementById('sPaid').value || 0;
+                const updatedProducts = [];
+                let stockIssue = false;
+
+                document.querySelectorAll('.sale-product-row').forEach(row => {
+                    const rowId = row.dataset.rowId;
+                    const ps = document.getElementById(`sProduct${rowId}`);
+                    const qs = document.getElementById(`sQuantity${rowId}`);
+                    const detailId = row.dataset.detailId || null; // Get original detail ID
+
+                    if (ps && ps.value && qs && qs.value) {
+                        const selectedOption = ps.options[ps.selectedIndex];
+                        const stock = +selectedOption.dataset.stock;
+                        const quantity = +qs.value;
+                        const unitPrice = +selectedOption.dataset.price;
+
+                        if (quantity > stock) {
+                            stockIssue = true;
+                            checkStock(ps, qs); // Highlight issue
+                        }
+
+                        updatedProducts.push({
+                            SaleDetailID: detailId, // Include original ID for matching on backend
+                            ProductID: +ps.value,
+                            Quantity: quantity,
+                            UnitPrice: unitPrice
+                        });
+                    }
+                });
+
+                 if (!TraderID || !SaleDate) {
+                    msgDiv.innerHTML = '<p class="text-red-600">يرجى اختيار تاجر وتحديد تاريخ الفاتورة.</p>';
+                    return;
+                }
+                if (updatedProducts.length === 0) {
+                    msgDiv.innerHTML = '<p class="text-red-600">يجب أن تحتوي الفاتورة على منتج واحد على الأقل.</p>';
+                    return;
+                }
+                if (stockIssue) {
+                     msgDiv.innerHTML = '<p class="text-red-600">يوجد خطأ في الكميات المطلوبة (تجاوز المخزون). يرجى المراجعة.</p>';
+                    return;
+                }
+
+                // Calculate total amount
+                const totalAmount = updatedProducts.reduce((sum, p) => sum + (p.Quantity * p.UnitPrice), 0);
+                 if (PaidAmount > totalAmount) {
+                     msgDiv.innerHTML = `<p class="text-red-600">المبلغ المدفوع (${PaidAmount.toFixed(2)}) لا يمكن أن يكون أكبر من إجمالي الفاتورة (${totalAmount.toFixed(2)}).</p>`;
+                     return;
+                 }
+
+                try {
+                     const payload = {
+                        TraderID,
+                        SaleDate,
+                        PaidAmount,
+                        products: updatedProducts // Send updated products including detail IDs
+                    };
+                    console.log("Sending Update Sale Payload:", JSON.stringify(payload));
+
+                    const res = await fetch(`http://localhost:3001/api/sales/${saleId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                     console.log("Update Sale Response:", data);
+
+                    if (res.ok) {
+                        loadSales(); // Reload list on success
+                    } else {
+                        msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء تعديل الفاتورة.'}</p>`;
+                    }
+                } catch (error) {
+                    console.error("Error updating sale:", error);
+                    msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم لتعديل الفاتورة.</p>';
+                }
+            });
+
+        } catch (error) {
+            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحضير نموذج تعديل الفاتورة: ${error.message}</p><button onclick="loadSales()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة الفواتير</button>`;
+            console.error("Error preparing edit sale form:", error);
+        }
+    }
+    // Show add purchase form
+    async function showAddPurchaseForm() {
+        try {
+            const res = await fetch('http://localhost:3001/api/products?active=true'); // Fetch active products
+            if (!res.ok) throw new Error('فشل تحميل قائمة المنتجات');
+            const products = await res.json();
+
+            let html = `<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">إنشاء سجل مشتريات جديد</h3>
+                <div id="purchaseMsg" class="mb-4"></div>
+                <form id="purchaseForm" class="space-y-4">
+                    <div>
+                        <label for="supplierName" class="block text-sm font-medium text-gray-700 mb-1">اسم المورد</label>
+                        <input id="supplierName" name="supplierName" type="text" placeholder="اسم المورد أو المحل" class="w-full" />
+                    </div>
+                     <div>
+                        <label for="purchaseDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الشراء</label>
+                        <input type="date" id="purchaseDate" name="purchaseDate" value="${new Date().toISOString().split('T')[0]}" class="w-full" required />
+                    </div>
+                     <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                        <textarea id="notes" name="notes" rows="2" class="w-full" placeholder="رقم فاتورة المورد، تفاصيل إضافية..."></textarea>
+                    </div>
+
+                    <fieldset class="border p-4 rounded mt-4">
+                        <legend class="text-lg font-medium text-gray-700 px-2">المنتجات المشتراة</legend>
+                        <div id="purchaseRows" class="space-y-3 mt-2">
+                            <!-- Purchase Row Template -->
+                        </div>
+                        <button id="addPurchaseRowBtn" type="button" class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">+ إضافة منتج</button>
+                    </fieldset>
+
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">إجمالي تكلفة الشراء</label>
+                        <div id="purchaseTotalDisplay" class="mt-1 block w-full p-2 bg-gray-100 rounded border border-gray-300 text-center font-bold">0.00</div>
+                    </div>
+
+                    <div class="flex justify-end space-x-2 space-x-reverse pt-6">
+                        <button type="button" id="cancelAddPurchase" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ المشتريات</button>
+                    </div>
+                </form>
+            </div>`;
+            document.getElementById('content').innerHTML = html;
+
+            let purchaseRowCount = 0;
+            const purchaseRowsContainer = document.getElementById('purchaseRows');
+            const purchaseTotalDisplay = document.getElementById('purchaseTotalDisplay');
+
+            // Function to add a new purchase row
+            const addPurchaseRow = (detail = null) => {
+                const rowId = purchaseRowCount++;
+                const div = document.createElement('div');
+                div.className = 'grid grid-cols-1 md:grid-cols-10 gap-2 items-center border-b border-gray-200 pb-2 purchase-product-row';
+                 div.dataset.rowId = rowId;
+                 div.dataset.detailId = detail ? detail.PurchaseDetailID : '';
+
+                // Product Select (Takes more space)
+                const sel = document.createElement('select');
+                sel.className = 'md:col-span-4';
+                sel.id = `pProduct${rowId}`;
+                sel.name = `pProduct${rowId}`;
+                sel.required = true;
+                sel.innerHTML = '<option value="">-- اختر منتج --</option>';
+                // Removed "Add New" option - better handled via Products page
+                // sel.innerHTML += '<option value="new">+ منتج جديد (لا يفضل استخدامه)</option>';
+                products.forEach(p => {
+                     const isSelected = detail && p.ProductID === detail.ProductID;
+                    sel.innerHTML += `<option value="${p.ProductID}" data-cost="${p.UnitCost || 0}" data-stock="${p.StockQuantity}"${isSelected ? ' selected' : ''}>${p.ProductName} (التكلفة الحالية: ${p.UnitCost?.toFixed(2) || 'N/A'})</option>`;
+                });
+                sel.addEventListener('change', (e) => {
+                    // Auto-fill cost if available when selecting an existing product
+                    const costInput = document.getElementById(`pCost${rowId}`);
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    const currentCost = selectedOption.dataset.cost;
+                    if (e.target.value && e.target.value !== 'new' && costInput) {
+                        costInput.value = parseFloat(currentCost).toFixed(2) || ''; // Use current cost as default
+                    } else {
+                         //costInput.value = ''; // Clear if new or no product selected
+                    }
+                    updatePurchaseTotal();
+                });
+
+                // Quantity Input
+                const q = document.createElement('input');
+                q.id = `pQuantity${rowId}`;
+                q.name = `pQuantity${rowId}`;
+                q.type = 'number';
+                q.min = 1;
+                q.placeholder = 'الكمية';
+                q.className = 'md:col-span-2';
+                q.required = true;
+                q.value = detail ? detail.Quantity : '';
+                q.addEventListener('input', updatePurchaseTotal);
+
+
+                // Unit Cost Input
+                const c = document.createElement('input');
+                c.id = `pCost${rowId}`;
+                c.name = `pCost${rowId}`;
+                c.type = 'number';
+                c.step = '0.01';
+                c.min = 0;
+                c.placeholder = 'تكلفة الوحدة';
+                c.className = 'md:col-span-2';
+                c.required = true;
+                 c.value = detail ? detail.UnitCost.toFixed(2) : ''; // Pre-fill if editing
+                c.addEventListener('input', updatePurchaseTotal);
+
+
+                // Remove Button
+                const rm = document.createElement('button');
+                rm.type = 'button';
+                rm.textContent = '×';
+                rm.className = 'md:col-span-1 text-red-500 hover:text-red-700 font-bold px-2 justify-self-center';
+                rm.addEventListener('click', () => {
+                    div.remove();
+                    updatePurchaseTotal();
+                });
+
+                div.append(sel, q, c, rm);
+                purchaseRowsContainer.append(div);
+                 // Auto-fill cost for existing detail on load
+                if (detail) {
+                    const selectedOption = sel.options[sel.selectedIndex];
+                    if (selectedOption && selectedOption.value === String(detail.ProductID)) {
+                        // c.value = detail.UnitCost.toFixed(2); // Already set above
+                    }
+                }
+            };
+
+            // Function to update purchase total display
+            const updatePurchaseTotal = () => {
+                let total = 0;
+                document.querySelectorAll('.purchase-product-row').forEach(row => {
+                    const rowId = row.dataset.rowId;
+                    const quantityInput = document.getElementById(`pQuantity${rowId}`);
+                    const costInput = document.getElementById(`pCost${rowId}`);
+                    const productSelect = document.getElementById(`pProduct${rowId}`);
+
+                     if (productSelect && productSelect.value && quantityInput && quantityInput.value && costInput && costInput.value) {
+                        const quantity = parseInt(quantityInput.value);
+                        const cost = parseFloat(costInput.value);
+                         if (!isNaN(quantity) && quantity > 0 && !isNaN(cost) && cost >= 0) {
+                            total += quantity * cost;
+                        }
+                    }
+                });
+                purchaseTotalDisplay.textContent = total.toFixed(2);
+            };
+
+            // Add the first row initially
+            addPurchaseRow();
+            updatePurchaseTotal();
+
+
+            // Event listeners
+            document.getElementById('addPurchaseRowBtn')?.addEventListener('click', () => addPurchaseRow());
+            document.getElementById('cancelAddPurchase')?.addEventListener('click', loadPurchases);
+
+            // Form submission handler
+            document.getElementById('purchaseForm')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                const msgDiv = document.getElementById('purchaseMsg');
+                msgDiv.innerHTML = ''; // Clear messages
+
+                const supplier_name = document.getElementById('supplierName').value.trim();
+                const purchase_date = document.getElementById('purchaseDate').value;
+                const notes = document.getElementById('notes').value.trim();
+                const rows = [];
+                let formIsValid = true;
+
+                document.querySelectorAll('.purchase-product-row').forEach(row => {
+                    const rowId = row.dataset.rowId;
+                    const ps = document.getElementById(`pProduct${rowId}`);
+                    const qs = document.getElementById(`pQuantity${rowId}`);
+                    const cs = document.getElementById(`pCost${rowId}`);
+
+                     if (ps && ps.value && qs && qs.value && cs && cs.value) {
+                         const quantity = +qs.value;
+                         const cost = +cs.value;
+                        if (quantity <= 0 || cost < 0) {
+                             formIsValid = false;
+                             qs.classList.toggle('border-red-500', quantity <= 0);
+                             cs.classList.toggle('border-red-500', cost < 0);
+                        } else {
+                            qs.classList.remove('border-red-500');
+                            cs.classList.remove('border-red-500');
+                            rows.push({
+                                product_id: +ps.value,
+                                quantity: quantity,
+                                unit_cost: cost
+                            });
+                        }
+                     } else if (ps || qs || cs) { // If any field in the row has value but not all required
+                         formIsValid = false;
+                         ps?.classList.toggle('border-red-500', !ps?.value);
+                         qs?.classList.toggle('border-red-500', !qs?.value);
+                         cs?.classList.toggle('border-red-500', !cs?.value);
+                     }
+                });
+
+                if (!purchase_date) {
+                     formIsValid = false;
+                     document.getElementById('purchaseDate').classList.add('border-red-500');
+                     msgDiv.innerHTML += '<p class="text-red-600">تاريخ الشراء مطلوب.</p>';
+                } else {
+                     document.getElementById('purchaseDate').classList.remove('border-red-500');
+                }
+
+                if (rows.length === 0) {
+                    formIsValid = false;
+                    msgDiv.innerHTML += '<p class="text-red-600">يجب أن يحتوي سجل المشتريات على منتج واحد على الأقل.</p>';
+                }
+
+                if (!formIsValid) {
+                    msgDiv.innerHTML += '<p class="text-red-600">يرجى مراجعة الحقول المطلوبة والتأكد من إدخال قيم صحيحة (كميات أكبر من صفر وتكلفة غير سالبة).</p>';
+                    return;
+                }
+
+                try {
+                    const payload = {
+                        supplier_name: supplier_name || null, // Allow null supplier
+                        purchase_date,
+                        notes: notes || null,
+                        products: rows
+                    };
+                     console.log("Sending Purchase Payload:", JSON.stringify(payload));
+
+                    const res = await fetch('http://localhost:3001/api/purchases', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+                    console.log("Purchase Response:", result);
+
+                    if (res.ok) {
+                        loadPurchases(); // Reload list on success
+                    } else {
+                        const errorMsg = result.error || (result.details ? result.details.join(', ') : 'خطأ غير معروف');
+                        msgDiv.innerHTML = `<p class="text-red-600">فشل حفظ المشتريات: ${errorMsg}</p>`;
+                    }
+                } catch (error) {
+                    console.error("Error saving purchase:", error);
+                    msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم لحفظ المشتريات.</p>';
+                }
+            });
+        } catch (error) {
+            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحضير نموذج المشتريات: ${error.message}</p><button onclick="loadPurchases()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المشتريات</button>`;
+            console.error("Error preparing add purchase form:", error);
+        }
+    }
+    // Function to show edit purchase form
+    async function showEditPurchaseForm(purchaseId) {
+        try {
+            // Fetch purchase details and all active products
+            const [purchaseRes, productsRes] = await Promise.all([
+                 fetch(`http://localhost:3001/api/purchases/${purchaseId}`),
+                 fetch('http://localhost:3001/api/products?active=true')
+            ]);
+
+            if (!purchaseRes.ok) throw new Error('لم يتم العثور على سجل المشتريات.');
+            if (!productsRes.ok) throw new Error('فشل تحميل قائمة المنتجات.');
+
+            const purchaseDetails = await purchaseRes.json(); // This should return an array of details for the same purchaseId
+             if (!purchaseDetails || purchaseDetails.length === 0) {
+                 throw new Error('لا توجد تفاصيل لهذا السجل.');
+            }
+            const products = await productsRes.json();
+
+            // Extract common info from the first detail record
+            const commonInfo = purchaseDetails[0];
+
+            let html = `<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل سجل المشتريات #${purchaseId}</h3>
+                <div id="purchaseMsg" class="mb-4"></div>
+                <form id="editPurchaseForm" class="space-y-4">
+                    <input type="hidden" id="editPurchaseId" value="${purchaseId}">
+                    <div>
+                        <label for="supplierName" class="block text-sm font-medium text-gray-700 mb-1">اسم المورد</label>
+                        <input id="supplierName" name="supplierName" type="text" value="${commonInfo.SupplierName || ''}" placeholder="اسم المورد أو المحل" class="w-full" />
+                    </div>
+                    <div>
+                        <label for="purchaseDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الشراء</label>
+                        <input type="date" id="purchaseDate" name="purchaseDate" value="${formatDateForInput(commonInfo.PurchaseDate)}" class="w-full" required />
+                    </div>
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                        <textarea id="notes" name="notes" rows="2" class="w-full" placeholder="رقم فاتورة المورد، تفاصيل إضافية...">${commonInfo.Notes || ''}</textarea>
+                    </div>
+
+                     <fieldset class="border p-4 rounded mt-4">
+                        <legend class="text-lg font-medium text-gray-700 px-2">المنتجات المشتراة</legend>
+                        <div id="purchaseRows" class="space-y-3 mt-2">
+                            <!-- Existing rows will be populated here -->
+                        </div>
+                        <button id="addPurchaseRowBtn" type="button" class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">+ إضافة منتج</button>
+                    </fieldset>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">إجمالي تكلفة الشراء</label>
+                        <div id="purchaseTotalDisplay" class="mt-1 block w-full p-2 bg-gray-100 rounded border border-gray-300 text-center font-bold">0.00</div>
+                    </div>
+
+                     <div class="flex justify-end space-x-2 space-x-reverse pt-6">
+                        <button type="button" id="cancelEditPurchase" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
+                    </div>
+                </form>
+            </div>`;
+            document.getElementById('content').innerHTML = html;
+
+            let purchaseRowCount = 0;
+            const purchaseRowsContainer = document.getElementById('purchaseRows');
+            const purchaseTotalDisplay = document.getElementById('purchaseTotalDisplay');
+
+            // Re-use addPurchaseRow function from the Add form
+             const addPurchaseRow = (detail = null) => {
+                 // (Identical logic to addPurchaseRow in showAddPurchaseForm)
+                 const rowId = purchaseRowCount++;
+                 const div = document.createElement('div');
+                 div.className = 'grid grid-cols-1 md:grid-cols-10 gap-2 items-center border-b border-gray-200 pb-2 purchase-product-row';
+                 div.dataset.rowId = rowId;
+                 div.dataset.detailId = detail ? detail.PurchaseDetailID : ''; // Store original detail ID
+
+                const sel = document.createElement('select');
+                sel.className = 'md:col-span-4';
+                sel.id = `pProduct${rowId}`;
+                sel.name = `pProduct${rowId}`;
+                sel.required = true;
+                sel.innerHTML = '<option value="">-- اختر منتج --</option>';
+                products.forEach(p => {
+                     const isSelected = detail && p.ProductID === detail.ProductID;
+                    sel.innerHTML += `<option value="${p.ProductID}" data-cost="${p.UnitCost || 0}" data-stock="${p.StockQuantity}"${isSelected ? ' selected' : ''}>${p.ProductName} (التكلفة الحالية: ${p.UnitCost?.toFixed(2) || 'N/A'})</option>`;
+                });
+                sel.addEventListener('change', (e) => {
+                    const costInput = document.getElementById(`pCost${rowId}`);
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    const currentCost = selectedOption.dataset.cost;
+                     if (e.target.value && e.target.value !== 'new' && costInput) {
+                        costInput.value = parseFloat(currentCost).toFixed(2) || '';
+                    }
+                    updatePurchaseTotal();
+                });
+
+                const q = document.createElement('input');
+                q.id = `pQuantity${rowId}`;
+                q.name = `pQuantity${rowId}`;
+                q.type = 'number';
+                q.min = 1;
+                q.placeholder = 'الكمية';
+                q.className = 'md:col-span-2';
+                q.required = true;
+                q.value = detail ? detail.Quantity : '';
+                q.addEventListener('input', updatePurchaseTotal);
+
+
+                const c = document.createElement('input');
+                c.id = `pCost${rowId}`;
+                c.name = `pCost${rowId}`;
+                c.type = 'number';
+                c.step = '0.01';
+                c.min = 0;
+                c.placeholder = 'تكلفة الوحدة';
+                c.className = 'md:col-span-2';
+                c.required = true;
+                c.value = detail ? detail.UnitCost.toFixed(2) : ''; // Pre-fill if editing
+                c.addEventListener('input', updatePurchaseTotal);
+
+
+                const rm = document.createElement('button');
+                rm.type = 'button';
+                rm.textContent = '×';
+                rm.className = 'md:col-span-1 text-red-500 hover:text-red-700 font-bold px-2 justify-self-center';
+                rm.addEventListener('click', () => {
+                    div.remove();
+                    updatePurchaseTotal();
+                });
+
+                div.append(sel, q, c, rm);
+                purchaseRowsContainer.append(div);
+                 // Auto-fill cost for existing detail on load
+                 if (detail) {
+                    const selectedOption = sel.options[sel.selectedIndex];
+                    if (selectedOption && selectedOption.value === String(detail.ProductID)) {
+                        // c.value = detail.UnitCost.toFixed(2); // Already set above
+                    }
+                 }
+            };
+
+             // Re-use updatePurchaseTotal function
+             const updatePurchaseTotal = () => {
+                 // (Identical logic to updatePurchaseTotal in showAddPurchaseForm)
+                 let total = 0;
+                 document.querySelectorAll('.purchase-product-row').forEach(row => {
+                    const rowId = row.dataset.rowId;
+                    const quantityInput = document.getElementById(`pQuantity${rowId}`);
+                    const costInput = document.getElementById(`pCost${rowId}`);
+                    const productSelect = document.getElementById(`pProduct${rowId}`);
+
+                     if (productSelect && productSelect.value && quantityInput && quantityInput.value && costInput && costInput.value) {
+                        const quantity = parseInt(quantityInput.value);
+                        const cost = parseFloat(costInput.value);
+                         if (!isNaN(quantity) && quantity > 0 && !isNaN(cost) && cost >= 0) {
+                            total += quantity * cost;
+                        }
+                    }
+                });
+                purchaseTotalDisplay.textContent = total.toFixed(2);
+            };
+
+            // Populate existing rows from purchaseDetails array
+            purchaseDetails.forEach(detail => addPurchaseRow(detail));
+            updatePurchaseTotal(); // Calculate initial total
+
+            // Event listeners
+            document.getElementById('addPurchaseRowBtn')?.addEventListener('click', () => addPurchaseRow()); // Add new empty row
+            document.getElementById('cancelEditPurchase')?.addEventListener('click', loadPurchases);
+
+            // Edit form submission handler
+            document.getElementById('editPurchaseForm')?.addEventListener('submit', async e => {
+                e.preventDefault();
+                 const msgDiv = document.getElementById('purchaseMsg');
+                 msgDiv.innerHTML = '';
+
+                 const editedPurchaseId = document.getElementById('editPurchaseId').value;
+                 const supplier_name = document.getElementById('supplierName').value.trim();
+                 const purchase_date = document.getElementById('purchaseDate').value;
+                 const notes = document.getElementById('notes').value.trim();
+                 const updatedRows = [];
+                 let formIsValid = true;
+
+                 document.querySelectorAll('.purchase-product-row').forEach(row => {
+                    const rowId = row.dataset.rowId;
+                    const detailId = row.dataset.detailId || null; // Get original detail ID
+                    const ps = document.getElementById(`pProduct${rowId}`);
+                    const qs = document.getElementById(`pQuantity${rowId}`);
+                    const cs = document.getElementById(`pCost${rowId}`);
+
+                     if (ps && ps.value && qs && qs.value && cs && cs.value) {
+                         const quantity = +qs.value;
+                         const cost = +cs.value;
+                         if (quantity <= 0 || cost < 0) {
+                             formIsValid = false;
+                             qs.classList.toggle('border-red-500', quantity <= 0);
+                             cs.classList.toggle('border-red-500', cost < 0);
+                         } else {
+                            qs.classList.remove('border-red-500');
+                            cs.classList.remove('border-red-500');
+                            updatedRows.push({
+                                purchase_detail_id: detailId, // Send original ID for matching/update
+                                product_id: +ps.value,
+                                quantity: quantity,
+                                unit_cost: cost
+                            });
+                         }
+                     } else if (ps || qs || cs) {
+                         formIsValid = false;
+                         ps?.classList.toggle('border-red-500', !ps?.value);
+                         qs?.classList.toggle('border-red-500', !qs?.value);
+                         cs?.classList.toggle('border-red-500', !cs?.value);
+                     }
+                 });
+
+                 if (!purchase_date) {
+                     formIsValid = false;
+                     document.getElementById('purchaseDate').classList.add('border-red-500');
+                     msgDiv.innerHTML += '<p class="text-red-600">تاريخ الشراء مطلوب.</p>';
+                 } else {
+                    document.getElementById('purchaseDate').classList.remove('border-red-500');
+                 }
+
+                if (updatedRows.length === 0) {
+                    formIsValid = false;
+                    msgDiv.innerHTML += '<p class="text-red-600">يجب أن يحتوي سجل المشتريات على منتج واحد على الأقل.</p>';
+                }
+
+                if (!formIsValid) {
+                    msgDiv.innerHTML += '<p class="text-red-600">يرجى مراجعة الحقول المطلوبة والتأكد من إدخال قيم صحيحة.</p>';
+                    return;
+                }
+
+                try {
+                    const payload = {
+                        supplier_name: supplier_name || null,
+                        purchase_date,
+                        notes: notes || null,
+                        products: updatedRows // Send updated rows including detail IDs
+                    };
+                    console.log("Sending Update Purchase Payload:", JSON.stringify(payload));
+
+                     const res = await fetch(`http://localhost:3001/api/purchases/${editedPurchaseId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+                     console.log("Update Purchase Response:", result);
+
+                    if (res.ok) {
+                        loadPurchases(); // Reload list on success
+                    } else {
+                        const errorMsg = result.error || (result.details ? result.details.join(', ') : 'خطأ غير معروف');
+                        msgDiv.innerHTML = `<p class="text-red-600">فشل تعديل المشتريات: ${errorMsg}</p>`;
+                    }
+                } catch(error) {
+                    console.error("Error updating purchase:", error);
+                    msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم لتعديل المشتريات.</p>';
+                }
+            });
+
+        } catch (error) {
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحضير نموذج تعديل المشتريات: ${error.message}</p><button onclick="loadPurchases()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المشتريات</button>`;
+            console.error("Error preparing edit purchase form:", error);
+        }
+    }
+    // --- Delete Purchase ---
+    async function deletePurchase(purchaseId) {
+        if (!confirm(`هل أنت متأكد من حذف سجل المشتريات رقم ${purchaseId}؟ سيتم خصم كميات المنتجات من المخزن.`)) return;
+        try {
+            const res = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`, { method: 'DELETE' });
+            const result = await res.json();
+            if (res.ok) {
+                alert('تم حذف سجل المشتريات بنجاح.');
+                loadPurchases(); // Refresh the list
+            } else {
+                alert(`فشل حذف المشتريات: ${result.error || 'خطأ غير معروف'}`);
+            }
+        } catch (error) {
+            console.error('Error deleting purchase:', error);
+            alert('حدث خطأ أثناء محاولة حذف المشتريات.');
+        }
+    }
+
+    // --- Show Purchase Details ---
+    async function showPurchaseDetails(purchaseId) {
+        try {
+            const res = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`);
+             if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || `Purchase record with ID ${purchaseId} not found`);
+            }
+            const data = await res.json();
+            let commonInfo, details;
+            if (Array.isArray(data)) {
+                if (!data.length) throw new Error('لا توجد تفاصيل لهذا السجل.');
+                commonInfo = {
+                    supplier_name: data[0].supplier_name,
+                    purchase_date: data[0].purchase_date,
+                    notes: data[0].notes
+                };
+                details = data.map(item => ({
+                    product_name: item.ProductName || item.product_name,
+                    unit_cost: item.UnitCost || item.unit_cost,
+                    quantity: item.Quantity || item.quantity
+                }));
+            } else {
+                commonInfo = {
+                    supplier_name: data.SupplierName || data.supplier_name,
+                    purchase_date: data.PurchaseDate || data.purchase_date,
+                    notes: data.Notes || data.notes
+                };
+                details = data.details || [];
+            }
+            let totalCost = 0;
+            let html = `<div class="max-w-2xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">`;
+            html += `<div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-semibold text-gray-800">تفاصيل المشتريات #${purchaseId}</h3>
+                        <button onclick="loadPurchases()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لقائمة المشتريات</button>
+                     </div>`;
+
+            html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-b pb-4">
+                        <div><strong class="text-gray-600">المورد:</strong> ${commonInfo.supplier_name || '-'}</div>
+                        <div><strong class="text-gray-600">تاريخ الشراء:</strong> ${formatDate(commonInfo.purchase_date)}</div>
+                        <div class="md:col-span-2"><strong class="text-gray-600">ملاحظات:</strong> ${commonInfo.notes || '-'}</div>
+                     </div>`;
+
+            html += `<h4 class="mt-4 mb-3 font-semibold text-lg text-gray-700">المنتجات المشتراة</h4>`;
+            html += `<table class="min-w-full bg-white border">
+                        <thead>
+                            <tr>
+                                <th class="border px-2 py-1 text-right">المنتج</th>
+                                <th class="border px-2 py-1 text-center">تكلفة الوحدة</th>
+                                <th class="border px-2 py-1 text-center">الكمية</th>
+                                <th class="border px-2 py-1 text-center">التكلفة الفرعية</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            details.forEach(d => {
+                const subTotal = d.quantity * d.unit_cost;
+                totalCost += subTotal;
+                html += `<tr class="table-row">
+                            <td class="border px-2 py-1 text-right">${d.ProductName || 'منتج غير معروف'}</td>
+                            <td class="border px-2 py-1 text-center">${d.unit_cost.toFixed(2)}</td>
+                            <td class="border px-2 py-1 text-center">${d.quantity}</td>
+                            <td class="border px-2 py-1 text-center">${subTotal.toFixed(2)}</td>
+                         </tr>`;
+            });
+            html += `</tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="border px-2 py-1 text-right font-bold">الإجمالي</td>
+                                <td class="border px-2 py-1 text-center font-bold">${totalCost.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                     </table>`;
+            html += `</div>`;
+            document.getElementById('content').innerHTML = html;
+        } catch (error) {
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في عرض تفاصيل المشتريات: ${error.message}</p><button onclick="loadPurchases()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المشتريات</button>`;
+             console.error("Error showing purchase details:", error);
+        }
+    }
+
+
+    // navigation handler
+    document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', e => {
+        e.preventDefault();
+        const page = a.getAttribute('data-page');
+        loadPage(page); // Use a function to load page and handle active state
+    }));
+
+    // Function to load page content and set active link
+    function loadPage(page) {
+        // Remove active state from all links
+        document.querySelectorAll('nav a').forEach(link => {
+            link.classList.remove('bg-blue-100', 'text-blue-600', 'bg-green-100', 'text-green-600', 'bg-purple-100', 'text-purple-600', 'bg-yellow-100', 'text-yellow-600', 'bg-red-100', 'text-red-600', 'bg-orange-100', 'text-orange-600');
+             link.classList.remove('font-bold'); // Remove bold if used
+        });
+
+        // Find the clicked link and add active state based on page
+        const activeLink = document.querySelector(`nav a[data-page="${page}"]`);
+        if (activeLink) {
+            let bgColor = 'bg-gray-100';
+            let textColor = 'text-gray-700';
+             switch (page) {
+                case 'sales': bgColor = 'bg-blue-100'; textColor = 'text-blue-600'; break;
+                case 'products': bgColor = 'bg-green-100'; textColor = 'text-green-600'; break;
+                case 'traders': bgColor = 'bg-purple-100'; textColor = 'text-purple-600'; break;
+                case 'purchases': bgColor = 'bg-yellow-100'; textColor = 'text-yellow-600'; break;
+                case 'expenses': bgColor = 'bg-red-100'; textColor = 'text-red-600'; break;
+                case 'payments': bgColor = 'bg-orange-100'; textColor = 'text-orange-600'; break;
+            }
+            activeLink.classList.add(bgColor, textColor, 'font-bold'); // Add bold for extra emphasis
+        }
+
+
+        // Update URL hash
+        window.location.hash = page;
+
+        // Load the content
+        if (page === 'sales') loadSales();
+        else if (page === 'products') loadProducts();
+        else if (page === 'traders') loadTraders();
+        else if (page === 'purchases') loadPurchases();
+        else if (page === 'expenses') loadExpenses();
+        else if (page === 'payments') loadPayments();
+         else loadSales(); // Default to sales if page unknown
+    }
+
+    // Sidebar Toggle Logic
+    const sidebar = document.getElementById('sidebar');
+    const toggleSidebarBtn = document.getElementById('toggleSidebar');
+    let isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+    function applySidebarState() {
+        if (isSidebarCollapsed) {
+            sidebar.classList.add('collapsed');
+        } else {
+            sidebar.classList.remove('collapsed');
+        }
+    }
+
+    toggleSidebarBtn.addEventListener('click', () => {
+        isSidebarCollapsed = !isSidebarCollapsed;
+        localStorage.setItem('sidebarCollapsed', isSidebarCollapsed);
+        applySidebarState();
+    });
+
+    // Apply initial state on load
+    applySidebarState();
+
+
+    // Initial load based on hash or default to 'sales'
+    const initialPage = window.location.hash.substring(1) || 'sales';
+    loadPage(initialPage);
+
+  </script>
+</body>
+</html>
