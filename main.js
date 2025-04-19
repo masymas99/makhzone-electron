@@ -247,9 +247,13 @@ backend.post('/api/sales', (req, res) => {
         products.forEach(item => {
           const subTotal = item.Quantity * item.UnitPrice;
           totalAmount += subTotal;
+          // Ensure UnitCost is a valid number
+          let unitCost = Number(item.UnitCost);
+          if (isNaN(unitCost)) unitCost = 0;
+          const profit = subTotal - (item.Quantity * unitCost);
           db.run(
             'INSERT INTO sale_details (SaleID, ProductID, Quantity, UnitPrice, SubTotal, Profit, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [saleID, item.ProductID, item.Quantity, item.UnitPrice, subTotal, subTotal - (item.Quantity * item.UnitCost), now, now]
+            [saleID, item.ProductID, item.Quantity, item.UnitPrice, subTotal, profit, now, now]
           );
           db.run(
             'UPDATE products SET StockQuantity = StockQuantity - ? WHERE ProductID = ?',
@@ -356,9 +360,13 @@ backend.put('/api/sales/:id', (req, res) => {
         products.forEach(item => {
           const subTotal = item.Quantity * item.UnitPrice;
           totalAmount += subTotal;
+          // Ensure UnitCost is a valid number
+          let unitCost = Number(item.UnitCost);
+          if (isNaN(unitCost)) unitCost = 0;
+          const profit = subTotal - (item.Quantity * unitCost);
           db.run(
             'INSERT INTO sale_details (SaleID, ProductID, Quantity, UnitPrice, SubTotal, Profit, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, item.ProductID, item.Quantity, item.UnitPrice, subTotal, subTotal - (item.Quantity * item.UnitCost), now, now]
+            [id, item.ProductID, item.Quantity, item.UnitPrice, subTotal, profit, now, now]
           );
           db.run(
             'UPDATE products SET StockQuantity = StockQuantity - ? WHERE ProductID = ?',

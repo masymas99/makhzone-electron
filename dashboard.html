@@ -521,6 +521,7 @@
             });
         });
     }
+
     async function loadExpenses() {
       const res = await fetch('http://localhost:3001/api/expenses');
       const data = await res.json();
@@ -559,6 +560,59 @@
       // Add event listeners for edit/delete buttons
       document.querySelectorAll('.edit-expense').forEach(btn => btn.addEventListener('click', () => showEditExpenseForm(btn.dataset.id)));
       document.querySelectorAll('.delete-expense').forEach(btn => btn.addEventListener('click', () => deleteExpense(btn.dataset.id)));
+
+      // --- Add Expense Form ---
+function showAddExpenseForm() {
+  const html = `
+    <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+      <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة مصروف جديد</h3>
+      <div id="expenseMsg" class="mb-4"></div>
+      <form id="expenseForm" class="space-y-4">
+        <div>
+          <label for="expenseDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ المصروف</label>
+          <input type="date" id="expenseDate" name="expenseDate" class="mt-1 block w-full" required />
+        </div>
+        <div>
+          <label for="expenseDesc" class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
+          <input type="text" id="expenseDesc" name="expenseDesc" placeholder="مثال: إيجار، كهرباء..." class="mt-1 block w-full" required />
+        </div>
+        <div>
+          <label for="expenseAmount" class="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
+          <input type="number" id="expenseAmount" name="expenseAmount" step="0.01" min="0" class="mt-1 block w-full" required />
+        </div>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ</button>
+      </form>
+    </div>
+  `;
+  document.getElementById('content').innerHTML = html;
+
+  document.getElementById('expenseForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const expenseDate = document.getElementById('expenseDate').value;
+    const description = document.getElementById('expenseDesc').value.trim();
+    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const msgDiv = document.getElementById('expenseMsg');
+    if (!expenseDate || !description || isNaN(amount) || amount <= 0) {
+      msgDiv.innerHTML = '<p class="text-red-600">جميع الحقول مطلوبة والمبلغ يجب أن يكون أكبر من صفر.</p>';
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:3001/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ExpenseDate: expenseDate, Description: description, Amount: amount })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        loadExpenses();
+      } else {
+        msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء الحفظ.'}</p>`;
+      }
+    } catch (error) {
+      msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+    }
+  });
+}
 
       // Expenses filter logic
       const filterExpenses = () => {
