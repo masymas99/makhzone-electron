@@ -360,6 +360,9 @@
         });
       }
     }
+
+
+
     async function loadPurchases() {
         const res = await fetch('http://localhost:3001/api/purchases');
         console.log('Response:', res);
@@ -370,6 +373,16 @@
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl">المشتريات</h2>
                 <button id="addPurchaseBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إنشاء مشتريات</button>
+            </div>
+            <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <label class="block mb-2" for="purchasesFilterStart">من تاريخ</label>
+                <input type="date" id="purchasesFilterStart" class="border px-3 py-2 rounded" />
+                <label class="block mb-2" for="purchasesFilterEnd">إلى تاريخ</label>
+                <input type="date" id="purchasesFilterEnd" class="border px-3 py-2 rounded" />
+                <label class="block mb-2" for="purchasesFilterMin">الحد الأدنى للإجمالي</label>
+                <input type="number" id="purchasesFilterMin" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />
+                <label class="block mb-2" for="purchasesFilterMax">الحد الأقصى للإجمالي</label>
+                <input type="number" id="purchasesFilterMax" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />
             </div>
             <table class="min-w-full bg-white border">
                 <thead>
@@ -385,7 +398,6 @@
                 </tbody>
             </table>
         `;
-
         document.getElementById('content').innerHTML = html;
 
         const addBtn = document.getElementById('addPurchaseBtn');
@@ -437,6 +449,8 @@
         Object.values(groupedPurchases).forEach(p => {
             console.log(p);
             const row = document.createElement('tr');
+            row.dataset.purchaseDate = formatDateForInput(p.PurchaseDate);
+            row.dataset.purchaseTotal = p.TotalAmount.toFixed(2);
             row.className = 'table-row';
             row.innerHTML = `
                 <td class="border px-2 py-1">${p.PurchaseID}</td>
@@ -444,9 +458,9 @@
                 <td class="border px-2 py-1">${p.SupplierName || ' لا تتوفر بيانات '}</td>
                 <td class="border px-2 py-1">${p.TotalAmount.toFixed(2)}</td>
                 <td class="border px-2 py-1">
-                    <button data-id="${p.PurchaseID}" class="view-purchase text-blue-600 hover:underline mr-2">عرض</button>
-                    <button data-id="${p.PurchaseID}" class="edit-purchase text-yellow-600 hover:underline mr-2">تعديل</button>
-                    <button data-id="${p.PurchaseID}" class="delete-purchase text-red-600 hover:underline mr-2">حذف</button>
+                <button data-id="${p.PurchaseID}" class="view-purchase text-blue-600 hover:underline mr-2">عرض</button>
+                <button data-id="${p.PurchaseID}" class="edit-purchase text-yellow-600 hover:underline mr-2">تعديل</button>
+                <button data-id="${p.PurchaseID}" class="delete-purchase text-red-600 hover:underline mr-2">حذف</button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -475,6 +489,29 @@
                 deletePurchase(id);
             });
         });
+
+        // Purchases filter logic
+        const filterPurchases = () => {
+            const start = document.getElementById('purchasesFilterStart').value;
+            const end = document.getElementById('purchasesFilterEnd').value;
+            const min = parseFloat(document.getElementById('purchasesFilterMin').value);
+            const max = parseFloat(document.getElementById('purchasesFilterMax').value);
+            document.querySelectorAll('#content table tbody tr').forEach(row => {
+                const date = row.dataset.purchaseDate;
+                const total = parseFloat(row.dataset.purchaseTotal);
+                let show = true;
+                if (start && date < start) show = false;
+                if (end && date > end) show = false;
+                if (!isNaN(min) && total < min) show = false;
+                if (!isNaN(max) && total > max) show = false;
+                row.style.display = show ? '' : 'none';
+            });
+        };
+        ['input','change'].forEach(evt => {
+            ['purchasesFilterStart','purchasesFilterEnd','purchasesFilterMin','purchasesFilterMax'].forEach(id => {
+                document.getElementById(id).addEventListener(evt, filterPurchases);
+            });
+        });
     }
     async function loadExpenses() {
       const res = await fetch('http://localhost:3001/api/expenses');
@@ -483,13 +520,30 @@
         + '<h2 class="text-2xl">المصروفات</h2>'
         + '<button id="addExpenseBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة مصروف</button>'
       + '</div>';
-      html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الوصف</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>'; // Added Actions column
+      html += '<div class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-4">'
+        + '<label class="block mb-2" for="expensesFilterStart">من تاريخ</label>'
+        + '<input type="date" id="expensesFilterStart" class="border px-3 py-2 rounded" />'
+        + '<label class="block mb-2" for="expensesFilterEnd">إلى تاريخ</label>'
+        + '<input type="date" id="expensesFilterEnd" class="border px-3 py-2 rounded" />'
+        + '<label class="block mb-2" for="expensesFilterMin">الحد الأدنى للمبلغ</label>'
+        + '<input type="number" id="expensesFilterMin" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />'
+        + '<label class="block mb-2" for="expensesFilterMax">الحد الأقصى للمبلغ</label>'
+        + '<input type="number" id="expensesFilterMax" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />'
+        + '<label class="block mb-2" for="expensesFilterText">بحث نصي</label>'
+        + '<input type="text" id="expensesFilterText" placeholder="بحث بالوصف أو التاريخ..." class="border px-3 py-2 rounded" />'
+      + '</div>';
+      html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الوصف</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
       if (res.ok && data.length) {
         data.forEach(e => {
-          // Added Edit and Delete buttons
-          html += `<tr class="table-row"><td class="border px-2 py-1">${e.ExpenseID}</td><td class="border px-2 py-1">${e.Description}</td><td class="border px-2 py-1">${e.Amount.toFixed(2)}</td><td class="border px-2 py-1">${formatDate(e.ExpenseDate)}</td><td class="border px-2 py-1"><button data-id="${e.ExpenseID}" class="edit-expense text-yellow-600 hover:underline mr-2">تعديل</button><button data-id="${e.ExpenseID}" class="delete-expense text-red-600 hover:underline">حذف</button></td></tr>`;
+          html += `<tr class="table-row" data-expense-date="${formatDateForInput(e.ExpenseDate)}" data-expense-amount="${e.Amount.toFixed(2)}">
+            <td class="border px-2 py-1">${e.ExpenseID}</td>
+            <td class="border px-2 py-1">${e.Description}</td>
+            <td class="border px-2 py-1">${e.Amount.toFixed(2)}</td>
+            <td class="border px-2 py-1">${formatDate(e.ExpenseDate)}</td>
+            <td class="border px-2 py-1"><button data-id="${e.ExpenseID}" class="edit-expense text-yellow-600 hover:underline mr-2">تعديل</button><button data-id="${e.ExpenseID}" class="delete-expense text-red-600 hover:underline">حذف</button></td>
+          </tr>`;
         });
-      } else html += '<tr><td colspan="5" class="text-center py-2">لا توجد بيانات</td></tr>'; // Updated colspan
+      } else html += '<tr><td colspan="5" class="text-center py-2">لا توجد بيانات</td></tr>';
       html += '</tbody></table>';
       document.getElementById('content').innerHTML = html;
       document.getElementById('addExpenseBtn')?.addEventListener('click', showAddExpenseForm); // Add null check
@@ -497,169 +551,32 @@
       // Add event listeners for edit/delete buttons
       document.querySelectorAll('.edit-expense').forEach(btn => btn.addEventListener('click', () => showEditExpenseForm(btn.dataset.id)));
       document.querySelectorAll('.delete-expense').forEach(btn => btn.addEventListener('click', () => deleteExpense(btn.dataset.id)));
-    }
-    function showAddExpenseForm() {
-      const today = new Date().toISOString().split('T')[0]; // Default to today
-      const html = `
-        <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
-          <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة مصروف جديد</h3>
-          <div id="expenseMsg" class="mb-4"></div>
-          <form id="expenseForm" class="space-y-4">
-            <div>
-              <label for="expenseDate" class="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
-              <input type="date" id="expenseDate" name="expenseDate" value="${today}" class="mt-1 block w-full" required />
-            </div>
-            <div>
-              <label for="expenseDesc" class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
-              <input type="text" id="expenseDesc" name="expenseDesc" placeholder="أدخل وصف المصروف" class="mt-1 block w-full" required />
-            </div>
-            <div>
-              <label for="expenseAmount" class="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
-              <input type="number" step="0.01" min="0" id="expenseAmount" name="expenseAmount" placeholder="أدخل المبلغ" class="mt-1 block w-full" required />
-            </div>
-            <div class="flex justify-end space-x-2 space-x-reverse pt-4">
-               <button type="button" id="cancelAddExpense" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
-               <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ المصروف</button>
-            </div>
-          </form>
-        </div>
-      `;
-      document.getElementById('content').innerHTML = html;
 
-      document.getElementById('cancelAddExpense')?.addEventListener('click', loadExpenses); // Go back
-
-      document.getElementById('expenseForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const msgDiv = document.getElementById('expenseMsg');
-        msgDiv.innerHTML = ''; // Clear previous messages
-        const payload = {
-          ExpenseDate: document.getElementById('expenseDate').value,
-          Description: document.getElementById('expenseDesc').value.trim(),
-          Amount: +document.getElementById('expenseAmount').value
-        };
-
-        if (!payload.ExpenseDate || !payload.Description || payload.Amount <= 0) {
-            msgDiv.innerHTML = '<p class="text-red-600">يرجى ملء جميع الحقول بمبلغ صحيح.</p>';
-            return;
-        }
-
-        try {
-          const res = await fetch('http://localhost:3001/api/expenses', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-          });
-          const data = await res.json();
-
-          if (res.ok) {
-            loadExpenses(); // Reload the list on success
-          } else {
-            msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء الحفظ.'}</p>`;
-          }
-        } catch (error) {
-          console.error("Error adding expense:", error);
-          msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
-        }
+      // Expenses filter logic
+      const filterExpenses = () => {
+        const start = document.getElementById('expensesFilterStart').value;
+        const end = document.getElementById('expensesFilterEnd').value;
+        const min = parseFloat(document.getElementById('expensesFilterMin').value);
+        const max = parseFloat(document.getElementById('expensesFilterMax').value);
+        const text = document.getElementById('expensesFilterText').value.trim().toLowerCase();
+        document.querySelectorAll('#content table tbody tr').forEach(row => {
+          const date = row.dataset.expenseDate;
+          const amount = parseFloat(row.dataset.expenseAmount);
+          let show = true;
+          if (start && date < start) show = false;
+          if (end && date > end) show = false;
+          if (!isNaN(min) && amount < min) show = false;
+          if (!isNaN(max) && amount > max) show = false;
+          if (text && !row.textContent.toLowerCase().includes(text)) show = false;
+          row.style.display = show ? '' : 'none';
+        });
+      };
+      ['input','change'].forEach(evt => {
+        ['expensesFilterStart','expensesFilterEnd','expensesFilterMin','expensesFilterMax','expensesFilterText'].forEach(id => {
+          document.getElementById(id).addEventListener(evt, filterExpenses);
+        });
       });
     }
-    // --- Edit Expense Form ---
-    async function showEditExpenseForm(id) {
-        try {
-            const res = await fetch(`http://localhost:3001/api/expenses/${id}`);
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.error || `Expense with ID ${id} not found`);
-            }
-            const expense = await res.json();
-
-            const html = `
-            <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
-              <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل المصروف #${id}</h3>
-              <div id="expenseMsg" class="mb-4"></div>
-              <form id="editExpenseForm" class="space-y-4">
-                <input type="hidden" id="editExpenseId" value="${expense.ExpenseID}">
-                <div>
-                  <label for="editExpenseDate" class="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
-                  <input type="date" id="editExpenseDate" name="editExpenseDate" value="${formatDateForInput(expense.ExpenseDate)}" class="mt-1 block w-full" required />
-                </div>
-                <div>
-                  <label for="editExpenseDesc" class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
-                  <input type="text" id="editExpenseDesc" name="editExpenseDesc" value="${expense.Description}" placeholder="أدخل وصف المصروف" class="mt-1 block w-full" required />
-                </div>
-                <div>
-                  <label for="editExpenseAmount" class="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
-                  <input type="number" step="0.01" min="0" id="editExpenseAmount" name="editExpenseAmount" value="${expense.Amount}" placeholder="أدخل المبلغ" class="mt-1 block w-full" required />
-                </div>
-                <div class="flex justify-end space-x-2 space-x-reverse pt-4">
-                   <button type="button" id="cancelEditExpense" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
-                   <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
-                </div>
-              </form>
-            </div>
-          `;
-            document.getElementById('content').innerHTML = html;
-
-            document.getElementById('cancelEditExpense')?.addEventListener('click', loadExpenses); // Go back
-
-            document.getElementById('editExpenseForm')?.addEventListener('submit', async e => {
-                e.preventDefault();
-                const msgDiv = document.getElementById('expenseMsg');
-                msgDiv.innerHTML = '';
-                const expenseId = document.getElementById('editExpenseId').value;
-                const payload = {
-                    ExpenseDate: document.getElementById('editExpenseDate').value,
-                    Description: document.getElementById('editExpenseDesc').value.trim(),
-                    Amount: +document.getElementById('editExpenseAmount').value
-                };
-
-                if (!payload.ExpenseDate || !payload.Description || payload.Amount <= 0) {
-                    msgDiv.innerHTML = '<p class="text-red-600">يرجى ملء جميع الحقول بمبلغ صحيح.</p>';
-                    return;
-                }
-
-                try {
-                    const updateRes = await fetch(`http://localhost:3001/api/expenses/${expenseId}`, {
-                        method: 'PUT',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(payload)
-                    });
-                    const updateData = await updateRes.json();
-
-                    if (updateRes.ok) {
-                        loadExpenses(); // Reload list on success
-                    } else {
-                        msgDiv.innerHTML = `<p class="text-red-600">${updateData.error || 'حدث خطأ أثناء التعديل.'}</p>`;
-                    }
-                } catch (error) {
-                    console.error("Error updating expense:", error);
-                    msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
-                }
-            });
-
-        } catch (error) {
-            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات المصروف: ${error.message}</p><button onclick="loadExpenses()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المصروفات</button>`;
-            console.error("Error loading expense for edit:", error);
-        }
-    }
-
-    // --- Delete Expense ---
-    async function deleteExpense(id) {
-      if (!confirm(`هل أنت متأكد من حذف المصروف رقم ${id}؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
-      try {
-        const res = await fetch(`http://localhost:3001/api/expenses/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (res.ok) {
-          alert('تم حذف المصروف بنجاح.');
-          loadExpenses(); // Refresh the list
-        } else {
-          alert(`فشل حذف المصروف: ${data.error || 'خطأ غير معروف'}`);
-        }
-      } catch (error) {
-        console.error("Error deleting expense:", error);
-        alert('حدث خطأ أثناء محاولة حذف المصروف.');
-      }
-    }
-
     async function loadPayments() {
         try {
             const res = await fetch('http://localhost:3001/api/payments');
@@ -669,13 +586,25 @@
             }
             const data = await res.json();
             let html = '<h2 class="text-2xl mb-4">الدفعات اليدوية للتجار</h2>'; // Clarify these are manual payments
+            html += '<div class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-4">'
+                + '<label class="block mb-2" for="paymentsFilterStart">من تاريخ</label>'
+                + '<input type="date" id="paymentsFilterStart" class="border px-3 py-2 rounded" />'
+                + '<label class="block mb-2" for="paymentsFilterEnd">إلى تاريخ</label>'
+                + '<input type="date" id="paymentsFilterEnd" class="border px-3 py-2 rounded" />'
+                + '<label class="block mb-2" for="paymentsFilterMin">الحد الأدنى للمبلغ</label>'
+                + '<input type="number" id="paymentsFilterMin" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />'
+                + '<label class="block mb-2" for="paymentsFilterMax">الحد الأقصى للمبلغ</label>'
+                + '<input type="number" id="paymentsFilterMax" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />'
+                + '<label class="block mb-2" for="paymentsFilterText">بحث نصي</label>'
+                + '<input type="text" id="paymentsFilterText" placeholder="بحث بالوصف أو التاريخ أو اسم التاجر..." class="border px-3 py-2 rounded" />'
+            + '</div>';
             html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الدفعة</th><th class="border px-2 py-1">ID التاجر</th><th class="border px-2 py-1">اسم التاجر</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">ملاحظات</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
             if (data.length > 0) {
                 // Sort payments by date descending (newest first)
                 data.sort((a, b) => new Date(b.PaymentDate) - new Date(a.PaymentDate));
 
                 data.forEach(p => {
-                    html += `<tr class="table-row">
+                    html += `<tr class="table-row" data-payment-date="${formatDateForInput(p.PaymentDate)}" data-payment-amount="${p.Amount.toFixed(2)}">
                         <td class="border px-2 py-1">${p.PaymentID}</td>
                         <td class="border px-2 py-1">${p.TraderID}</td>
                         <td class="border px-2 py-1">${p.TraderName || 'غير متوفر'}</td>
@@ -698,6 +627,30 @@
             document.querySelectorAll('.edit-payment').forEach(btn => btn.addEventListener('click', () => showEditPaymentForm(btn.dataset.id)));
             document.querySelectorAll('.delete-payment').forEach(btn => btn.addEventListener('click', () => deletePayment(btn.dataset.id)));
 
+            // Payments filter logic
+            const filterPayments = () => {
+                const start = document.getElementById('paymentsFilterStart').value;
+                const end = document.getElementById('paymentsFilterEnd').value;
+                const min = parseFloat(document.getElementById('paymentsFilterMin').value);
+                const max = parseFloat(document.getElementById('paymentsFilterMax').value);
+                const text = document.getElementById('paymentsFilterText').value.trim().toLowerCase();
+                document.querySelectorAll('#content table tbody tr').forEach(row => {
+                    const date = row.dataset.paymentDate;
+                    const amount = parseFloat(row.dataset.paymentAmount);
+                    let show = true;
+                    if (start && date < start) show = false;
+                    if (end && date > end) show = false;
+                    if (!isNaN(min) && amount < min) show = false;
+                    if (!isNaN(max) && amount > max) show = false;
+                    if (text && !row.textContent.toLowerCase().includes(text)) show = false;
+                    row.style.display = show ? '' : 'none';
+                });
+            };
+            ['input','change'].forEach(evt => {
+                ['paymentsFilterStart','paymentsFilterEnd','paymentsFilterMin','paymentsFilterMax','paymentsFilterText'].forEach(id => {
+                    document.getElementById(id).addEventListener(evt, filterPayments);
+                });
+            });
         } catch (error) {
             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل الدفعات: ${error.message}</p>`;
             console.error("Error loading payments:", error);
@@ -1891,17 +1844,18 @@
                 const selectedOption = productSelect.options[productSelect.selectedIndex];
                 const stock = parseInt(selectedOption?.dataset.stock);
                 const quantity = parseInt(quantityInput.value);
-                const msgDiv = document.getElementById('saleMsg');
+                const msgDiv = document.getElementById('saleMsg'); // Use the main message div
 
                 quantityInput.classList.remove('border-red-500', 'ring-red-500');
 
                 if (selectedOption && !isNaN(stock) && !isNaN(quantity) && quantity > stock) {
-                    quantityInput.classList.add('border-red-500', 'ring', 'ring-red-500', 'ring-opacity-50');
-                    msgDiv.innerHTML = `<p class="text-red-600">الكمية المطلوبة للمنتج "${selectedOption.text.split(' (')[0]}" (${quantity}) تتجاوز الكمية المتاحة (${stock}).</p>`;
-                    return false;
+                    quantityInput.classList.add('border-red-500', 'ring', 'ring-red-500', 'ring-opacity-50'); // Add red border/ring
+                     msgDiv.innerHTML = `<p class="text-red-600">الكمية المطلوبة للمنتج "${selectedOption.text.split(' (')[0]}" (${quantity}) تتجاوز الكمية المتاحة (${stock}).</p>`;
+                     return false; // Indicate stock issue
                 } else {
-                    // Potentially clear message if needed, but be cautious
-                    return true;
+                     //msgDiv.innerHTML = ''; // Clear message if stock is okay for this item (careful not to clear other messages)
+                     // You might want a more sophisticated message handling system if multiple errors can occur
+                     return true; // Indicate stock is OK
                 }
             };
 
@@ -1919,7 +1873,6 @@
                 e.preventDefault();
                 const msgDiv = document.getElementById('saleMsg');
                 msgDiv.innerHTML = '';
-
                 const saleId = document.getElementById('editSaleId').value;
                 const TraderID = +document.getElementById('sTrader').value;
                 const SaleDate = document.getElementById('sDate').value;
@@ -1958,11 +1911,12 @@
                     return;
                 }
                 if (updatedProducts.length === 0) {
-                    msgDiv.innerHTML = '<p class="text-red-600">يجب أن تحتوي الفاتورة على منتج واحد على الأقل.</p>';
+                    msgDiv.innerHTML = '<p class="text-red-600">يجب أن يحتوي سجل المشتريات على منتج واحد على الأقل.</p>';
                     return;
                 }
-                if (stockIssue) {
-                     msgDiv.innerHTML = '<p class="text-red-600">يوجد خطأ في الكميات المطلوبة (تجاوز المخزون). يرجى المراجعة.</p>';
+                 if (stockIssue) {
+                    // Message is already displayed by checkStock
+                    msgDiv.innerHTML = '<p class="text-red-600">يوجد خطأ في الكميات المطلوبة (تجاوز المخزون). يرجى المراجعة.</p>';
                     return;
                 }
 
@@ -2014,7 +1968,8 @@
             if (!res.ok) throw new Error('فشل تحميل قائمة المنتجات');
             const products = await res.json();
 
-            let html = `<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+            let html = `
+            <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
                 <h3 class="text-xl font-semibold mb-6 text-gray-700">إنشاء سجل مشتريات جديد</h3>
                 <div id="purchaseMsg" class="mb-4"></div>
                 <form id="purchaseForm" class="space-y-4">
@@ -2064,28 +2019,22 @@
                  div.dataset.rowId = rowId;
                  div.dataset.detailId = detail ? detail.PurchaseDetailID : '';
 
-                // Product Select (Takes more space)
                 const sel = document.createElement('select');
                 sel.className = 'md:col-span-4';
                 sel.id = `pProduct${rowId}`;
                 sel.name = `pProduct${rowId}`;
                 sel.required = true;
                 sel.innerHTML = '<option value="">-- اختر منتج --</option>';
-                // Removed "Add New" option - better handled via Products page
-                // sel.innerHTML += '<option value="new">+ منتج جديد (لا يفضل استخدامه)</option>';
                 products.forEach(p => {
                      const isSelected = detail && p.ProductID === detail.ProductID;
                     sel.innerHTML += `<option value="${p.ProductID}" data-cost="${p.UnitCost || 0}" data-stock="${p.StockQuantity}"${isSelected ? ' selected' : ''}>${p.ProductName} (التكلفة الحالية: ${p.UnitCost?.toFixed(2) || 'N/A'})</option>`;
                 });
                 sel.addEventListener('change', (e) => {
-                    // Auto-fill cost if available when selecting an existing product
                     const costInput = document.getElementById(`pCost${rowId}`);
                     const selectedOption = e.target.options[e.target.selectedIndex];
                     const currentCost = selectedOption.dataset.cost;
                     if (e.target.value && e.target.value !== 'new' && costInput) {
-                        costInput.value = parseFloat(currentCost).toFixed(2) || ''; // Use current cost as default
-                    } else {
-                         //costInput.value = ''; // Clear if new or no product selected
+                        costInput.value = parseFloat(currentCost).toFixed(2) || '';
                     }
                     updatePurchaseTotal();
                 });
@@ -2168,16 +2117,16 @@
             // Form submission handler
             document.getElementById('purchaseForm')?.addEventListener('submit', async e => {
                 e.preventDefault();
-                const msgDiv = document.getElementById('purchaseMsg');
-                msgDiv.innerHTML = ''; // Clear messages
+                 const msgDiv = document.getElementById('purchaseMsg');
+                 msgDiv.innerHTML = '';
 
-                const supplier_name = document.getElementById('supplierName').value.trim();
-                const purchase_date = document.getElementById('purchaseDate').value;
-                const notes = document.getElementById('notes').value.trim();
-                const rows = [];
-                let formIsValid = true;
+                 const supplier_name = document.getElementById('supplierName').value.trim();
+                 const purchase_date = document.getElementById('purchaseDate').value;
+                 const notes = document.getElementById('notes').value.trim();
+                 const rows = [];
+                 let formIsValid = true;
 
-                document.querySelectorAll('.purchase-product-row').forEach(row => {
+                 document.querySelectorAll('.purchase-product-row').forEach(row => {
                     const rowId = row.dataset.rowId;
                     const ps = document.getElementById(`pProduct${rowId}`);
                     const qs = document.getElementById(`pQuantity${rowId}`);
@@ -2199,7 +2148,7 @@
                                 unit_cost: cost
                             });
                         }
-                     } else if (ps || qs || cs) { // If any field in the row has value but not all required
+                     } else if (ps || qs || cs) {
                          formIsValid = false;
                          ps?.classList.toggle('border-red-500', !ps?.value);
                          qs?.classList.toggle('border-red-500', !qs?.value);
@@ -2279,7 +2228,8 @@
             // Extract common info from the first detail record
             const commonInfo = purchaseDetails[0];
 
-            let html = `<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+            let html = `
+            <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
                 <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل سجل المشتريات #${purchaseId}</h3>
                 <div id="purchaseMsg" class="mb-4"></div>
                 <form id="editPurchaseForm" class="space-y-4">
@@ -2329,7 +2279,7 @@
                  const div = document.createElement('div');
                  div.className = 'grid grid-cols-1 md:grid-cols-10 gap-2 items-center border-b border-gray-200 pb-2 purchase-product-row';
                  div.dataset.rowId = rowId;
-                 div.dataset.detailId = detail ? detail.PurchaseDetailID : ''; // Store original detail ID
+                 div.dataset.detailId = detail ? detail.PurchaseDetailID : '';
 
                 const sel = document.createElement('select');
                 sel.className = 'md:col-span-4';
@@ -2345,7 +2295,7 @@
                     const costInput = document.getElementById(`pCost${rowId}`);
                     const selectedOption = e.target.options[e.target.selectedIndex];
                     const currentCost = selectedOption.dataset.cost;
-                     if (e.target.value && e.target.value !== 'new' && costInput) {
+                    if (e.target.value && e.target.value !== 'new' && costInput) {
                         costInput.value = parseFloat(currentCost).toFixed(2) || '';
                     }
                     updatePurchaseTotal();
@@ -2372,7 +2322,7 @@
                 c.placeholder = 'تكلفة الوحدة';
                 c.className = 'md:col-span-2';
                 c.required = true;
-                c.value = detail ? detail.UnitCost.toFixed(2) : ''; // Pre-fill if editing
+                 c.value = detail ? detail.UnitCost.toFixed(2) : ''; // Pre-fill if editing
                 c.addEventListener('input', updatePurchaseTotal);
 
 
@@ -2448,11 +2398,11 @@
                      if (ps && ps.value && qs && qs.value && cs && cs.value) {
                          const quantity = +qs.value;
                          const cost = +cs.value;
-                         if (quantity <= 0 || cost < 0) {
+                        if (quantity <= 0 || cost < 0) {
                              formIsValid = false;
                              qs.classList.toggle('border-red-500', quantity <= 0);
                              cs.classList.toggle('border-red-500', cost < 0);
-                         } else {
+                        } else {
                             qs.classList.remove('border-red-500');
                             cs.classList.remove('border-red-500');
                             updatedRows.push({
@@ -2461,22 +2411,22 @@
                                 quantity: quantity,
                                 unit_cost: cost
                             });
-                         }
+                        }
                      } else if (ps || qs || cs) {
                          formIsValid = false;
                          ps?.classList.toggle('border-red-500', !ps?.value);
                          qs?.classList.toggle('border-red-500', !qs?.value);
                          cs?.classList.toggle('border-red-500', !cs?.value);
                      }
-                 });
+                });
 
-                 if (!purchase_date) {
+                if (!purchase_date) {
                      formIsValid = false;
                      document.getElementById('purchaseDate').classList.add('border-red-500');
                      msgDiv.innerHTML += '<p class="text-red-600">تاريخ الشراء مطلوب.</p>';
-                 } else {
-                    document.getElementById('purchaseDate').classList.remove('border-red-500');
-                 }
+                } else {
+                     document.getElementById('purchaseDate').classList.remove('border-red-500');
+                }
 
                 if (updatedRows.length === 0) {
                     formIsValid = false;
@@ -2495,9 +2445,9 @@
                         notes: notes || null,
                         products: updatedRows // Send updated rows including detail IDs
                     };
-                    console.log("Sending Update Purchase Payload:", JSON.stringify(payload));
+                     console.log("Sending Update Purchase Payload:", JSON.stringify(payload));
 
-                     const res = await fetch(`http://localhost:3001/api/purchases/${editedPurchaseId}`, {
+                    const res = await fetch(`http://localhost:3001/api/purchases/${editedPurchaseId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -2577,12 +2527,14 @@
                         <button onclick="loadPurchases()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لقائمة المشتريات</button>
                      </div>`;
 
+            // Purchase Summary
             html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-b pb-4">
                         <div><strong class="text-gray-600">المورد:</strong> ${commonInfo.supplier_name || '-'}</div>
                         <div><strong class="text-gray-600">تاريخ الشراء:</strong> ${formatDate(commonInfo.purchase_date)}</div>
                         <div class="md:col-span-2"><strong class="text-gray-600">ملاحظات:</strong> ${commonInfo.notes || '-'}</div>
                      </div>`;
 
+            // Purchase Details (Products)
             html += `<h4 class="mt-4 mb-3 font-semibold text-lg text-gray-700">المنتجات المشتراة</h4>`;
             html += `<table class="min-w-full bg-white border">
                         <thead>
