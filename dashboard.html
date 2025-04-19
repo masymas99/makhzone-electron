@@ -189,6 +189,16 @@
         + '<h2 class="text-2xl">قائمة الفواتير</h2>'
         + '<button id="addSaleBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إنشاء فاتورة</button>'
       + '</div>';
+      html += '<div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">'
+        + '<label class="block mb-2" for="salesFilterStart">من تاريخ</label>'
+        + '<input type="date" id="salesFilterStart" class="border px-3 py-2 rounded" />'
+        + '<label class="block mb-2" for="salesFilterEnd">إلى تاريخ</label>'
+        + '<input type="date" id="salesFilterEnd" class="border px-3 py-2 rounded" />'
+        + '<label class="block mb-2" for="salesFilterMin">الحد الأدنى للإجمالي</label>'
+        + '<input type="number" id="salesFilterMin" class="border px-3 py-2 rounded" placeholder="0.00" step="0.01" />'
+        + '<label class="block mb-2" for="salesFilterMax">الحد الأقصى للإجمالي</label>'
+        + '<input type="number" id="salesFilterMax" class="border px-3 py-2 rounded" placeholder="0.00" step="0.01" />'
+      + '</div>';
       if (!res.ok) html += `<p class="text-red-600">${data.error}</p>`;
       else if (data.length === 0) html += '<p>لا توجد فواتير.</p>';
       else {
@@ -196,15 +206,15 @@
         html += '<thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">التاجر</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th><th class="border px-2 py-1">الإجراءات</th></tr></thead>';
         html += '<tbody>';
         data.forEach(s => {
-          html += `<tr class="table-row">
+          html += `<tr class="table-row" data-sale-date="${formatDateForInput(s.SaleDate)}" data-sale-total="${(s.TotalAmount || 0).toFixed(2)}">
             <td class="border px-2 py-1">${s.SaleID}</td>
             <td class="border px-2 py-1">${s.trader?.TraderName || '-'}</td>
             <td class="border px-2 py-1">${formatDate(s.SaleDate)}</td>
-            <td class="border px-2 py-1">${s.TotalAmount?.toFixed(2) || '0.00'}</td>
+            <td class="border px-2 py-1">${(s.TotalAmount?.toFixed(2) || '0.00')}</td>
             <td class="border px-2 py-1 space-x-2">
-              <button class="view-sale text-blue-600 hover:underline" data-id="${s.SaleID}">عرض</button>
-              <button class="edit-sale text-green-600 hover:underline" data-id="${s.SaleID}">تعديل</button>
-              <button class="delete-sale text-red-600 hover:underline" data-id="${s.SaleID}">حذف</button>
+            <button class="view-sale text-blue-600 hover:underline" data-id="${s.SaleID}">عرض</button>
+            <button class="edit-sale text-green-600 hover:underline" data-id="${s.SaleID}">تعديل</button>
+            <button class="delete-sale text-red-600 hover:underline" data-id="${s.SaleID}">حذف</button>
             </td>
           </tr>`;
         });
@@ -215,6 +225,29 @@
       document.querySelectorAll('.view-sale').forEach(btn => btn.addEventListener('click', () => showSaleDetails(btn.dataset.id)));
       document.querySelectorAll('.edit-sale').forEach(btn => btn.addEventListener('click', () => showEditSaleForm(btn.dataset.id)));
       document.querySelectorAll('.delete-sale').forEach(btn => btn.addEventListener('click', () => deleteSale(btn.dataset.id)));
+
+      // Sales filter logic
+      const filterSales = () => {
+        const start = document.getElementById('salesFilterStart').value;
+        const end = document.getElementById('salesFilterEnd').value;
+        const min = parseFloat(document.getElementById('salesFilterMin').value);
+        const max = parseFloat(document.getElementById('salesFilterMax').value);
+        document.querySelectorAll('#content table tbody tr').forEach(row => {
+          const date = row.dataset.saleDate;
+          const total = parseFloat(row.dataset.saleTotal);
+          let show = true;
+          if (start && date < start) show = false;
+          if (end && date > end) show = false;
+          if (!isNaN(min) && total < min) show = false;
+          if (!isNaN(max) && total > max) show = false;
+          row.style.display = show ? '' : 'none';
+        });
+      };
+      ['input','change'].forEach(evt => {
+        ['salesFilterStart','salesFilterEnd','salesFilterMin','salesFilterMax'].forEach(id => {
+          document.getElementById(id).addEventListener(evt, filterSales);
+        });
+      });
     }
     async function loadProducts() {
       const res = await fetch('http://localhost:3001/api/products');
@@ -223,6 +256,7 @@
         + '<h2 class="text-2xl">المنتجات</h2>'
         + '<button id="addProductBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة منتج</button>'
       + '</div>';
+      html += '<div class="mb-4"><input type="text" id="productsSearchInput" placeholder="بحث..." class="border px-3 py-2 rounded w-full"></div>';
       html += '<table class="min-w-full bg-white border">';
       html += '<thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الاسم</th><th class="border px-2 py-1">الصنف</th><th class="border px-2 py-1">الكمية</th><th class="border px-2 py-1">سعر البيع</th><th class="border px-2 py-1">سعر التكلفة</th><th class="border px-2 py-1">الإجراءات</th></tr></thead>';
       html += '<tbody>';
@@ -236,6 +270,15 @@
       document.querySelectorAll('.edit-product').forEach(btn => btn.addEventListener('click', () => showEditProductForm(btn.dataset.id)));
       document.querySelectorAll('.delete-product').forEach(btn => btn.addEventListener('click', () => deleteProduct(btn.dataset.id)));
       document.getElementById('addProductBtn')?.addEventListener('click', showAddProductForm); // Add null check
+      const productsSearchEl = document.getElementById('productsSearchInput');
+      if (productsSearchEl) {
+        productsSearchEl.addEventListener('input', () => {
+          const filter = productsSearchEl.value.trim().toLowerCase();
+          document.querySelectorAll('#content table tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+          });
+        });
+      }
     }
     async function loadTraders() {
       const res = await fetch('http://localhost:3001/api/traders');
@@ -1595,7 +1638,7 @@
 
                 const res = await fetch('http://localhost:3001/api/sales', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
@@ -1674,7 +1717,6 @@
             html += `<p class="text-gray-500">لا توجد تفاصيل منتجات لهذه الفاتورة.</p>`;
         }
         html += '</div>'; // Close main container
-
         document.getElementById('content').innerHTML = html;
         // Add event listener only if the general back button exists
         document.getElementById('backToSalesBtn')?.addEventListener('click', loadSales);
@@ -1824,7 +1866,7 @@
                  }
             };
 
-            // Function to update total (same as add form)
+             // Re-use updateSaleTotal function
              const updateSaleTotal = () => {
                  let total = 0;
                  document.querySelectorAll('.sale-product-row').forEach(row => {
@@ -1926,10 +1968,11 @@
 
                 // Calculate total amount
                 const totalAmount = updatedProducts.reduce((sum, p) => sum + (p.Quantity * p.UnitPrice), 0);
-                 if (PaidAmount > totalAmount) {
+
+                if (PaidAmount > totalAmount) {
                      msgDiv.innerHTML = `<p class="text-red-600">المبلغ المدفوع (${PaidAmount.toFixed(2)}) لا يمكن أن يكون أكبر من إجمالي الفاتورة (${totalAmount.toFixed(2)}).</p>`;
                      return;
-                 }
+                }
 
                 try {
                      const payload = {
@@ -2119,7 +2162,7 @@
 
 
             // Event listeners
-            document.getElementById('addPurchaseRowBtn')?.addEventListener('click', () => addPurchaseRow());
+            document.getElementById('addPurchaseRowBtn')?.addEventListener('click', () => addPurchaseRow()); // Add new empty row
             document.getElementById('cancelAddPurchase')?.addEventListener('click', loadPurchases);
 
             // Form submission handler
