@@ -244,6 +244,7 @@
         + '<h2 class="text-2xl">التجار</h2>'
         + '<button id="addTraderBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة تاجر</button>'
       + '</div>';
+      html += '<div class="mb-4"><input type="text" id="tradersSearchInput" placeholder="بحث..." class="border px-3 py-2 rounded w-full"></div>';
       html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الاسم</th><th class="border px-2 py-1">الرصيد الحالي</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
       if (res.ok && data.length) {
         // Fetch all sales and payments once for efficiency
@@ -306,6 +307,15 @@
       document.querySelectorAll('.manual-payment').forEach(btn => btn.addEventListener('click', e => showManualPaymentForm(e.target.dataset.id))); // Keep this or remove if details view is preferred
       document.querySelectorAll('.edit-trader').forEach(btn => btn.addEventListener('click', e => showEditTraderForm(e.target.dataset.id)));
       document.querySelectorAll('.delete-trader').forEach(btn => btn.addEventListener('click', e => deleteTrader(e.target.dataset.id)));
+      const searchInput = document.getElementById('tradersSearchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', () => {
+          const filter = searchInput.value.trim().toLowerCase();
+          document.querySelectorAll('#content table tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+          });
+        });
+      }
     }
     async function loadPurchases() {
         const res = await fetch('http://localhost:3001/api/purchases');
@@ -1039,7 +1049,7 @@
             html += `<div class="mt-6 mb-6">
                         <h4 class="text-lg font-semibold mb-3 text-gray-700">سجل الفواتير</h4>`;
             if (sales.length > 0) {
-                html += `<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الفاتورة</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th><th class="border px-2 py-1">المدفوع</th><th class="border px-2 py-1">المتبقي</th><th class="border px-2 py-1">عرض</th></tr></thead><tbody>`;
+                html += `<table id="salesHistoryTable" class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الفاتورة</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th><th class="border px-2 py-1">المدفوع</th><th class="border px-2 py-1">المتبقي</th><th class="border px-2 py-1">عرض</th></tr></thead><tbody>`;
                 // Sort sales by date descending
                 sales.sort((a, b) => new Date(b.SaleDate) - new Date(a.SaleDate));
                 sales.forEach(s => {
@@ -1055,7 +1065,7 @@
             html += `<div class="mt-6">
                         <h4 class="text-lg font-semibold mb-3 text-gray-700">سجل الدفعات اليدوية</h4>`;
              if (payments.length > 0) {
-                html += `<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الدفعة</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">ملاحظات</th></tr></thead><tbody>`;
+                html += `<table id="paymentsHistoryTable" class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الدفعة</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">ملاحظات</th></tr></thead><tbody>`;
                  // Sort payments by date descending
                 payments.sort((a, b) => new Date(b.PaymentDate) - new Date(a.PaymentDate));
                 payments.forEach(p => {
@@ -1124,6 +1134,27 @@
                      msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
                 }
             });
+
+            // Filter sales history rows
+            const salesSearchEl = document.getElementById('salesSearchInput');
+            if (salesSearchEl) {
+                salesSearchEl.addEventListener('input', () => {
+                    const filter = salesSearchEl.value.trim().toLowerCase();
+                    document.querySelectorAll('#salesHistoryTable tbody tr').forEach(row => {
+                        row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+                    });
+                });
+            }
+            // Filter manual payments rows
+            const paymentsSearchEl = document.getElementById('paymentsSearchInput');
+            if (paymentsSearchEl) {
+                paymentsSearchEl.addEventListener('input', () => {
+                    const filter = paymentsSearchEl.value.trim().toLowerCase();
+                    document.querySelectorAll('#paymentsHistoryTable tbody tr').forEach(row => {
+                        row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+                    });
+                });
+            }
 
         } catch (error) {
             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل تفاصيل التاجر: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة التجار</button>`;
@@ -1453,6 +1484,7 @@
                 const rowId = row.dataset.rowId;
                 const productSelect = document.getElementById(`sProduct${rowId}`);
                 const quantityInput = document.getElementById(`sQuantity${rowId}`);
+
                 if (productSelect && productSelect.value && quantityInput && quantityInput.value) {
                     const selectedOption = productSelect.options[productSelect.selectedIndex];
                     const price = parseFloat(selectedOption.dataset.price);
@@ -1477,7 +1509,7 @@
 
             if (selectedOption && !isNaN(stock) && !isNaN(quantity) && quantity > stock) {
                 quantityInput.classList.add('border-red-500', 'ring', 'ring-red-500', 'ring-opacity-50'); // Add red border/ring
-                 msgDiv.innerHTML = `<p class="text-red-600">الكمية المطلوبة للمنتج "${selectedOption.text.split(' (')[0]}" (${quantity}) تتجاوز الكمية المتاحة بالمخزن (${stock}).</p>`;
+                 msgDiv.innerHTML = `<p class="text-red-600">الكمية المطلوبة للمنتج "${selectedOption.text.split(' (')[0]}" (${quantity}) تتجاوز الكمية المتاحة (${stock}).</p>`;
                  return false; // Indicate stock issue
             } else {
                  //msgDiv.innerHTML = ''; // Clear message if stock is okay for this item (careful not to clear other messages)
@@ -1716,7 +1748,7 @@
                             <label for="sPaid" class="block text-sm font-medium text-gray-700 mb-1">المبلغ المدفوع</label>
                             <input id="sPaid" name="sPaid" type="number" step="0.01" min="0" value="${s.PaidAmount}" placeholder="0.00" class="w-full" />
                         </div>
-                        <div>
+                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">الإجمالي المتوقع</label>
                             <div id="saleTotalDisplay" class="mt-1 block w-full p-2 bg-gray-100 rounded border border-gray-300 text-center font-bold">0.00</div>
                         </div>
@@ -1783,6 +1815,13 @@
 
                 div.append(sel, inp, rm);
                 productRowsContainer.append(div);
+                 // Auto-fill cost for existing detail on load
+                 if (detail) {
+                    const selectedOption = sel.options[sel.selectedIndex];
+                    if (selectedOption && selectedOption.value === String(detail.ProductID)) {
+                        // c.value = detail.UnitCost.toFixed(2); // Already set above
+                    }
+                 }
             };
 
             // Function to update total (same as add form)
@@ -1792,6 +1831,7 @@
                     const rowId = row.dataset.rowId;
                     const productSelect = document.getElementById(`sProduct${rowId}`);
                     const quantityInput = document.getElementById(`sQuantity${rowId}`);
+
                      if (productSelect && productSelect.value && quantityInput && quantityInput.value) {
                         const selectedOption = productSelect.options[productSelect.selectedIndex];
                         const price = parseFloat(selectedOption.dataset.price);
@@ -2007,7 +2047,6 @@
                     updatePurchaseTotal();
                 });
 
-                // Quantity Input
                 const q = document.createElement('input');
                 q.id = `pQuantity${rowId}`;
                 q.name = `pQuantity${rowId}`;
@@ -2020,7 +2059,6 @@
                 q.addEventListener('input', updatePurchaseTotal);
 
 
-                // Unit Cost Input
                 const c = document.createElement('input');
                 c.id = `pCost${rowId}`;
                 c.name = `pCost${rowId}`;
@@ -2034,7 +2072,6 @@
                 c.addEventListener('input', updatePurchaseTotal);
 
 
-                // Remove Button
                 const rm = document.createElement('button');
                 rm.type = 'button';
                 rm.textContent = '×';
@@ -2047,7 +2084,7 @@
                 div.append(sel, q, c, rm);
                 purchaseRowsContainer.append(div);
                  // Auto-fill cost for existing detail on load
-                if (detail) {
+                 if (detail) {
                     const selectedOption = sel.options[sel.selectedIndex];
                     if (selectedOption && selectedOption.value === String(detail.ProductID)) {
                         // c.value = detail.UnitCost.toFixed(2); // Already set above
@@ -2055,10 +2092,11 @@
                  }
             };
 
-            // Function to update purchase total display
-            const updatePurchaseTotal = () => {
-                let total = 0;
-                document.querySelectorAll('.purchase-product-row').forEach(row => {
+             // Re-use updatePurchaseTotal function
+             const updatePurchaseTotal = () => {
+                 // (Identical logic to updatePurchaseTotal in showAddPurchaseForm)
+                 let total = 0;
+                 document.querySelectorAll('.purchase-product-row').forEach(row => {
                     const rowId = row.dataset.rowId;
                     const quantityInput = document.getElementById(`pQuantity${rowId}`);
                     const costInput = document.getElementById(`pCost${rowId}`);
