@@ -211,7 +211,7 @@ backend.get('/api/sales', (req, res) => {
     let count = sales.length;
     if (count === 0) return res.json([]);
     sales.forEach(sale => {
-      db.all('SELECT sd.*, p.ProductName, p.UnitPrice, p.UnitCost FROM sale_details sd JOIN products p ON sd.ProductID = p.ProductID WHERE sd.SaleID = ?', [sale.SaleID], (err, details) => {
+      db.all('SELECT sd.*, p.ProductName, p.UnitPrice, p.UnitCost FROM sale_details sd LEFT JOIN products p ON sd.ProductID = p.ProductID WHERE sd.SaleID = ?', [sale.SaleID], (err, details) => {
         if (err) details = [];
         db.get('SELECT TraderID, TraderName FROM traders WHERE TraderID = ?', [sale.TraderID], (err, trader) => {
           result.push({ ...sale, trader: trader || null, details });
@@ -327,7 +327,7 @@ backend.get('/api/sales/:id', (req, res) => {
   db.get('SELECT * FROM sales WHERE SaleID = ?', [id], (err, sale) => {
     if (err || !sale) return res.status(404).json({ error: 'فاتورة غير موجودة' });
     db.all(
-      'SELECT sd.*, p.ProductName, p.UnitPrice, p.UnitCost FROM sale_details sd JOIN products p ON sd.ProductID = p.ProductID WHERE sd.SaleID = ?',
+      'SELECT sd.*, p.ProductName, p.UnitPrice, p.UnitCost FROM sale_details sd LEFT JOIN products p ON sd.ProductID = p.ProductID WHERE sd.SaleID = ?',
       [id],
       (err, details) => {
         if (err) details = [];

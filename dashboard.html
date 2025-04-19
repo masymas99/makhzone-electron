@@ -309,6 +309,7 @@
     }
     async function loadPurchases() {
         const res = await fetch('http://localhost:3001/api/purchases');
+        console.log('Response:', res);
         const data = await res.json();
         console.log('Loading purchases data:', data);
 
@@ -357,11 +358,12 @@
         // Group purchases by PurchaseID to display one row per purchase summary
         const groupedPurchases = {};
         data.forEach(p => {
+            console.log(p);
             if (!groupedPurchases[p.PurchaseID]) {
                 groupedPurchases[p.PurchaseID] = {
                     PurchaseID: p.PurchaseID,
                     PurchaseDate: p.PurchaseDate,
-                    SupplierName: p.SupplierName,
+                    SupplierName: p.SupplierDisplayName || p.SupplierName, // Fallback to original SupplierName if SupplierDisplayName is null
                     TotalAmount: 0, // Calculate total amount from details
                     details: []
                 };
@@ -380,17 +382,18 @@
         tbody.innerHTML = ''; // Clear previous content
 
         Object.values(groupedPurchases).forEach(p => {
+            console.log(p);
             const row = document.createElement('tr');
             row.className = 'table-row';
             row.innerHTML = `
                 <td class="border px-2 py-1">${p.PurchaseID}</td>
                 <td class="border px-2 py-1">${formatDate(p.PurchaseDate)}</td>
-                <td class="border px-2 py-1">${p.SupplierName || '-'}</td>
+                <td class="border px-2 py-1">${p.SupplierName || ' لا تتوفر بيانات '}</td>
                 <td class="border px-2 py-1">${p.TotalAmount.toFixed(2)}</td>
                 <td class="border px-2 py-1">
                     <button data-id="${p.PurchaseID}" class="view-purchase text-blue-600 hover:underline mr-2">عرض</button>
                     <button data-id="${p.PurchaseID}" class="edit-purchase text-yellow-600 hover:underline mr-2">تعديل</button>
-                    <button data-id="${p.PurchaseID}" class="delete-purchase text-red-600 hover:underline">حذف</button>
+                    <button data-id="${p.PurchaseID}" class="delete-purchase text-red-600 hover:underline mr-2">حذف</button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -1626,6 +1629,7 @@
                         </thead>
                         <tbody>`;
             s.details.forEach(d => {
+                console.log(d);
                 html += `<tr class="table-row">
                             <td class="border px-2 py-1">${d.ProductName || 'منتج محذوف'}</td>
                             <td class="border px-2 py-1 text-center">${d.UnitPrice.toFixed(2)}</td>
@@ -2048,7 +2052,7 @@
                     if (selectedOption && selectedOption.value === String(detail.ProductID)) {
                         // c.value = detail.UnitCost.toFixed(2); // Already set above
                     }
-                }
+                 }
             };
 
             // Function to update purchase total display
@@ -2136,7 +2140,7 @@
                 }
 
                 if (!formIsValid) {
-                    msgDiv.innerHTML += '<p class="text-red-600">يرجى مراجعة الحقول المطلوبة والتأكد من إدخال قيم صحيحة (كميات أكبر من صفر وتكلفة غير سالبة).</p>';
+                    msgDiv.innerHTML += '<p class="text-red-600">يرجى مراجعة الحقول المطلوبة والتأكد من إدخال قيم صحيحة.</p>';
                     return;
                 }
 
