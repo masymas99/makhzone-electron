@@ -2505,6 +2505,7 @@ async function deleteExpense(expenseId) {
                  fetch('http://localhost:3001/api/products?active=true')
             ]);
 
+
             if (!purchaseRes.ok) throw new Error('لم يتم العثور على سجل المشتريات.');
             if (!productsRes.ok) throw new Error('فشل تحميل قائمة المنتجات.');
 
@@ -2763,22 +2764,45 @@ async function deleteExpense(expenseId) {
     }
     // --- Delete Purchase ---
     async function deletePurchase(purchaseId) {
-        if (!confirm(`هل أنت متأكد من حذف سجل المشتريات رقم ${purchaseId}؟ سيتم خصم كميات المنتجات من المخزن.`)) return;
-        try {
-            const res = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`, { method: 'DELETE' });
-            const result = await res.json();
-            if (res.ok) {
-                alert('تم حذف سجل المشتريات بنجاح.');
-                loadPurchases(); // Refresh the list
-            } else {
-                alert(`فشل حذف المشتريات: ${result.error || 'خطأ غير معروف'}`);
-            }
-        } catch (error) {
-            console.error('Error deleting purchase:', error);
-            alert('حدث خطأ أثناء محاولة حذف المشتريات.');
-        }
+    if (!confirm(`هل أنت متأكد من حذف سجل المشتريات رقم ${purchaseId}؟ سيتم خصم كميات المنتجات من المخزون.`)) {
+        return;
     }
 
+    try {
+        // 1. تحقق من وجود المشتريات وجلب تفاصيلها
+        const checkRes = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`);
+        if (!checkRes.ok) {
+            throw new Error('لم يتم العثور على سجل المشتريات');
+        }
+
+        const purchaseDetails = await checkRes.json();
+        if (!purchaseDetails || purchaseDetails.length === 0) {
+            throw new Error('لا توجد تفاصيل لهذا السجل');
+        }
+
+        // 2. محاولة حذف المشتريات
+        const deleteRes = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await deleteRes.json();
+
+        if (deleteRes.ok) {
+            // 3. نجاح الحذف
+            alert('تم حذف سجل المشتريات وتحديث المخزون بنجاح');
+            loadPurchases(); // تحديث القائمة
+        } else {
+            // 4. فشل الحذف مع رسالة خطأ من الخادم
+            throw new Error(result.error || 'فشل حذف المشتريات');
+        }
+    } catch (error) {
+        console.error('Error deleting purchase:', error);
+        alert(`حدث خطأ أثناء محاولة حذف المشتريات: ${error.message}`);
+    }
+}
     // --- Show Purchase Details ---
     async function showPurchaseDetails(purchaseId) {
         try {

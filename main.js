@@ -9,6 +9,11 @@ backend.use(cors());
 backend.use(express.json());
 const PORT = 3001;
 
+// Helper function for date handling
+function getCurrentDateTime() {
+  return new Date().toISOString();
+}
+
 // إعداد قاعدة البيانات SQLite
 const dbPath = path.join(app.getPath('userData'), 'makhzone.db');
 let db;
@@ -239,7 +244,7 @@ backend.post('/api/sales', (req, res) => {
   if (!TraderID || PaidAmount == null || !Array.isArray(products)) {
     return res.status(400).json({ error: 'بيانات غير كاملة' });
   }
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
 
@@ -359,7 +364,7 @@ backend.put('/api/sales/:id', (req, res) => {
   const id = req.params.id;
   const { TraderID, PaidAmount, products } = req.body;
   if (!TraderID || PaidAmount == null || !Array.isArray(products)) return res.status(400).json({ error: 'بيانات غير كاملة' });
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
     db.get('SELECT * FROM sales WHERE SaleID = ?', [id], (err, sale) => {
@@ -402,9 +407,16 @@ backend.put('/api/sales/:id', (req, res) => {
 
 backend.delete('/api/sales/:id', (req, res) => {
   const id = req.params.id;
+  const now = getCurrentDateTime();
+
   db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    
     db.get('SELECT * FROM sales WHERE SaleID = ?', [id], (err, sale) => {
-      if (err || !sale) return res.status(404).json({ error: 'فاتورة غير موجودة' });
+      if (err || !sale) {
+        db.run('ROLLBACK');
+        return res.status(404).json({ error: 'فاتورة غير موجودة' });
+      }
       db.all('SELECT * FROM sale_details WHERE SaleID = ?', [id], (err, details) => {
         details.forEach(detail => {
           db.get(
@@ -432,8 +444,17 @@ backend.delete('/api/sales/:id', (req, res) => {
         db.run('UPDATE traders SET Balance = Balance - ?, TotalSales = TotalSales - ? WHERE TraderID = ?', [sale.TotalAmount, sale.TotalAmount, sale.TraderID]);
         db.run('DELETE FROM sale_details WHERE SaleID = ?', [id]);
         db.run('DELETE FROM sales WHERE SaleID = ?', [id], function(err) {
-          if (err) return res.status(500).json({ error: 'خطأ في حذف الفاتورة' });
-          res.json({ deleted: this.changes });
+          if (err) {
+            db.run('ROLLBACK');
+            return res.status(500).json({ error: 'خطأ في حذف الفاتورة' });
+          }
+          db.run('COMMIT', err => {
+            if (err) {
+              db.run('ROLLBACK');
+              return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
+            }
+            res.json({ deleted: this.changes });
+          });
         });
       });
     });
@@ -467,7 +488,7 @@ backend.get('/api/products/:id', (req, res) => {
 backend.post('/api/products', (req, res) => {
   const { ProductName, Category, StockQuantity, UnitPrice, UnitCost, IsActive } = req.body;
   if (!ProductName) return res.status(400).json({ error: 'اسم المنتج مطلوب' });
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
     db.run(
@@ -516,7 +537,7 @@ backend.post('/api/products', (req, res) => {
 
 backend.put('/api/products/:id', (req, res) => {
   const { ProductName, Category, StockQuantity, UnitPrice, UnitCost, IsActive } = req.body;
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.run(
     'UPDATE products SET ProductName = ?, Category = ?, StockQuantity = ?, UnitPrice = ?, UnitCost = ?, IsActive = ?, updated_at = ? WHERE ProductID = ?',
     [ProductName, Category || 'General', StockQuantity || 0, UnitPrice || 0, UnitCost || 0, IsActive ? 1 : 0, now, req.params.id],
@@ -552,7 +573,7 @@ backend.get('/api/expenses/:id', (req, res) => {
 backend.post('/api/expenses', (req, res) => {
   const { ExpenseDate, Description, Amount } = req.body;
   if (!ExpenseDate || !Description || !Amount) return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.run(
     'INSERT INTO expenses (ExpenseDate, Description, Amount, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
     [ExpenseDate, Description, Amount, now, now],
@@ -565,7 +586,7 @@ backend.post('/api/expenses', (req, res) => {
 
 backend.put('/api/expenses/:id', (req, res) => {
   const { ExpenseDate, Description, Amount } = req.body;
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.run(
     'UPDATE expenses SET ExpenseDate = ?, Description = ?, Amount = ?, updated_at = ? WHERE ExpenseID = ?',
     [ExpenseDate, Description, Amount, now, req.params.id],
@@ -630,7 +651,7 @@ backend.get('/api/purchases', (req, res) => {
 backend.post('/api/purchases', (req, res) => {
   const { supplier_name, notes, products } = req.body;
   if (!supplier_name || !Array.isArray(products)) return res.status(400).json({ error: 'بيانات غير كاملة' });
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
     
@@ -725,7 +746,7 @@ backend.put('/api/purchases/:id', (req, res) => {
     return res.status(400).json({ error: 'بيانات غير كاملة' });
   }
   
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
@@ -863,126 +884,144 @@ backend.put('/api/purchases/:id', (req, res) => {
 
 backend.delete('/api/purchases/:id', (req, res) => {
   const purchaseID = req.params.id;
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
     
-    // Fetch detail lines
-    db.all('SELECT * FROM purchase_details WHERE PurchaseID = ?', [purchaseID], (err, details) => {
-      if (err) {
+    // First get the purchase record to check its type (from products or purchases page)
+    db.get('SELECT * FROM purchases WHERE PurchaseID = ?', [purchaseID], (err, purchase) => {
+      if (err || !purchase) {
         db.run('ROLLBACK');
-        return res.status(500).json({ error: 'خطأ في استرجاع تفاصيل المشتريات' });
+        return res.status(500).json({ error: 'خطأ في استرجاع المشتريات' });
       }
-      if (details.length > 0) {
-        // existing detail revert logic
-        details.forEach(detail => {
-          db.get(
-            'SELECT StockQuantity, UnitCost FROM products WHERE ProductID = ?',
-            [detail.ProductID],
-            (err, product) => {
+
+      // Check if it's a direct product purchase
+      if (purchase.ProductID) {
+        // Handle direct product purchase deletion
+        db.get('SELECT * FROM products WHERE ProductID = ?', [purchase.ProductID], (err, product) => {
+          if (err || !product) {
+            db.run('ROLLBACK');
+            return res.status(500).json({ error: 'خطأ في استرجاع بيانات المنتج' });
+          }
+
+          const currentQty = product.StockQuantity || 0;
+          const purchaseQty = purchase.Quantity || 0;
+          const newQty = Math.max(0, currentQty - purchaseQty);
+
+          // Calculate new unit cost by removing this purchase's effect
+          const currentTotalCost = currentQty * (product.UnitCost || 0);
+          const purchaseTotalCost = purchaseQty * (purchase.UnitCost || 0);
+          const newTotalCost = Math.max(0, currentTotalCost - purchaseTotalCost);
+          const newUnitCost = newQty > 0 ? newTotalCost / newQty : 0;
+
+          // Update product
+          db.run(
+            'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
+            [newQty, newUnitCost, now, purchase.ProductID],
+            (err) => {
               if (err) {
                 db.run('ROLLBACK');
-                return res.status(500).json({ error: 'خطأ في استرجاع بيانات المنتج' });
+                return res.status(500).json({ error: 'خطأ في تحديث المنتج' });
               }
-              const currentQty = product.StockQuantity || 0;
-              const currentCost = product.UnitCost || 0;
-              const newQty = currentQty - detail.Quantity;
-              const totalCost = currentQty * currentCost;
-              const removeCost = detail.Quantity * detail.UnitCost;
-              const newUnitCost = newQty > 0 ? (totalCost - removeCost) / newQty : 0;
-              db.run(
-                'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
-                [newQty, newUnitCost, now, detail.ProductID],
-                err => {
+
+              // Delete the purchase
+              db.run('DELETE FROM purchases WHERE PurchaseID = ?', [purchaseID], function(err) {
+                if (err) {
+                  db.run('ROLLBACK');
+                  return res.status(500).json({ error: 'خطأ في حذف المشتريات' });
+                }
+                db.run('COMMIT', (err) => {
                   if (err) {
                     db.run('ROLLBACK');
-                    return res.status(500).json({ error: 'خطأ في تحديث بيانات المنتج' });
+                    return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
                   }
-                }
-              );
+                  res.json({ deleted: true, productUpdated: true });
+                });
+              });
             }
           );
         });
-        // delete detail records then purchase
-        db.run('DELETE FROM purchase_details WHERE PurchaseID = ?', [purchaseID]);
-        db.run('DELETE FROM purchases WHERE PurchaseID = ?', [purchaseID], function(err) {
+      } else {
+        // Handle purchase with details
+        db.all('SELECT * FROM purchase_details WHERE PurchaseID = ?', [purchaseID], (err, details) => {
           if (err) {
             db.run('ROLLBACK');
-            return res.status(500).json({ error: 'خطأ في حذف المشتريات' });
+            return res.status(500).json({ error: 'خطأ في استرجاع تفاصيل المشتريات' });
           }
-          db.run('COMMIT', commitErr => {
-            if (commitErr) {
-              db.run('ROLLBACK');
-              return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
+
+          let processedDetails = 0;
+          
+          if (!details || details.length === 0) {
+            // No details, just delete the purchase
+            completeDeletion();
+            return;
+          }
+
+          details.forEach(detail => {
+            if (!detail.ProductID) {
+              processedDetails++;
+              if (processedDetails === details.length) {
+                completeDeletion();
+              }
+              return;
             }
-            return res.json({ deleted: this.changes });
+
+            db.get('SELECT * FROM products WHERE ProductID = ?', [detail.ProductID], (err, product) => {
+              if (err || !product) {
+                processedDetails++;
+                if (processedDetails === details.length) {
+                  completeDeletion();
+                }
+                return;
+              }
+
+              const currentQty = product.StockQuantity || 0;
+              const detailQty = detail.Quantity || 0;
+              const newQty = Math.max(0, currentQty - detailQty);
+
+              // Calculate new unit cost by removing this detail's effect
+              const currentTotalCost = currentQty * (product.UnitCost || 0);
+              const detailTotalCost = detailQty * (detail.UnitCost || 0);
+              const newTotalCost = Math.max(0, currentTotalCost - detailTotalCost);
+              const newUnitCost = newQty > 0 ? newTotalCost / newQty : 0;
+
+              db.run(
+                'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
+                [newQty, newUnitCost, now, detail.ProductID],
+                () => {
+                  processedDetails++;
+                  if (processedDetails === details.length) {
+                    completeDeletion();
+                  }
+                }
+              );
+            });
           });
         });
-      } else {
-        // header-only purchase (from product page)
-        db.get('SELECT ProductID, Quantity, UnitCost FROM purchases WHERE PurchaseID = ?', [purchaseID], (err, header) => {
+      }
+
+      function completeDeletion() {
+        db.run('DELETE FROM purchase_details WHERE PurchaseID = ?', [purchaseID], err => {
           if (err) {
             db.run('ROLLBACK');
-            return res.status(500).json({ error: 'خطأ في استرجاع المشتريات' });
+            return res.status(500).json({ error: 'خطأ في حذف تفاصيل المشتريات' });
           }
-          if (header && header.ProductID) {
-            db.get(
-              'SELECT StockQuantity, UnitCost FROM products WHERE ProductID = ?',
-              [header.ProductID],
-              (err, product) => {
-                if (err) {
-                  db.run('ROLLBACK');
-                  return res.status(500).json({ error: 'خطأ في استرجاع بيانات المنتج' });
-                }
-                const currentQty = product.StockQuantity || 0;
-                const currentCost = product.UnitCost || 0;
-                const newQty = currentQty - header.Quantity;
-                const totalCost = currentQty * currentCost;
-                const removeCost = header.Quantity * header.UnitCost;
-                const newUnitCost = newQty > 0 ? (totalCost - removeCost) / newQty : 0;
-                db.run(
-                  'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
-                  [newQty, newUnitCost, now, header.ProductID],
-                  function(err) {
-                    if (err) {
-                      db.run('ROLLBACK');
-                      return res.status(500).json({ error: 'خطأ في تحديث بيانات المنتج' });
-                    }
-                     // delete purchase header
-                     db.run('DELETE FROM purchases WHERE PurchaseID = ?', [purchaseID], function(err) {
-                       if (err) {
-                         db.run('ROLLBACK');
-                         return res.status(500).json({ error: 'خطأ في حذف المشتريات' });
-                       }
-                       db.run('COMMIT', commitErr => {
-                         if (commitErr) {
-                           db.run('ROLLBACK');
-                           return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
-                         }
-                         return res.json({ deleted: this.changes });
-                       });
-                     });
-                  }
-                );
-              }
-            );
-          } else {
-            // no details and no header product, just delete
-            db.run('DELETE FROM purchases WHERE PurchaseID = ?', [purchaseID], function(err) {
+          
+          db.run('DELETE FROM purchases WHERE PurchaseID = ?', [purchaseID], function(err) {
+            if (err) {
+              db.run('ROLLBACK');
+              return res.status(500).json({ error: 'خطأ في حذف المشتريات' });
+            }
+            
+            db.run('COMMIT', err => {
               if (err) {
                 db.run('ROLLBACK');
-                return res.status(500).json({ error: 'خطأ في حذف المشتريات' });
+                return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
               }
-              db.run('COMMIT', commitErr => {
-                if (commitErr) {
-                  db.run('ROLLBACK');
-                  return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
-                }
-                return res.json({ deleted: this.changes });
-              });
+              res.json({ deleted: true });
             });
-          }
+          });
         });
       }
     });
@@ -992,16 +1031,79 @@ backend.delete('/api/purchases/:id', (req, res) => {
 // Get single purchase details
 backend.get('/api/purchases/:id', (req, res) => {
   const id = req.params.id;
-  db.get('SELECT * FROM purchases WHERE PurchaseID = ?', [id], (err, purchase) => {
-    if (err || !purchase) return res.status(404).json({ error: 'المشتريات غير موجودة' });
-    db.all(
-      'SELECT pd.Quantity AS quantity, pd.UnitCost AS unit_cost, pd.SubTotal AS sub_total, pr.ProductName FROM purchase_details pd JOIN products pr ON pd.ProductID = pr.ProductID WHERE pd.PurchaseID = ?',
-      [id],
-      (err, details) => {
-        if (err) details = [];
-        res.json({ ...purchase, details });
+  
+  db.serialize(() => {
+    // Get purchase header
+    db.get(`
+      SELECT 
+        p.*,
+        COALESCE(s.Name, p.SupplierName) as SupplierName
+      FROM purchases p
+      LEFT JOIN suppliers s ON p.SupplierName = s.Name
+      WHERE p.PurchaseID = ?
+    `, [id], (err, purchase) => {
+      if (err || !purchase) {
+        return res.status(404).json({ error: 'المشتريات غير موجودة' });
       }
-    );
+
+      const formattedPurchase = {
+        purchase_id: purchase.PurchaseID,
+        supplier_name: purchase.SupplierName || '',
+        notes: purchase.Notes || '',
+        purchase_date: purchase.PurchaseDate || new Date().toISOString(),
+        total_amount: purchase.TotalAmount || 0,
+        products: []
+      };
+
+      // Check if it's a direct product purchase
+      if (purchase.ProductID) {
+        db.get('SELECT * FROM products WHERE ProductID = ?', [purchase.ProductID], (err, product) => {
+          if (err || !product) {
+            return res.json(formattedPurchase);
+          }
+
+          formattedPurchase.products = [{
+            product_id: product.ProductID,
+            product_name: product.ProductName,
+            category: product.Category || 'General',
+            quantity: purchase.Quantity || 0,
+            unit_cost: purchase.UnitCost || 0,
+            unit_price: product.UnitPrice || 0,
+            sub_total: purchase.TotalAmount || 0
+          }];
+
+          res.json(formattedPurchase);
+        });
+      } else {
+        // Get purchase details
+        db.all(`
+          SELECT 
+            pd.*,
+            p.ProductName,
+            p.Category,
+            p.UnitPrice
+          FROM purchase_details pd
+          LEFT JOIN products p ON pd.ProductID = p.ProductID
+          WHERE pd.PurchaseID = ?
+        `, [id], (err, details) => {
+          if (err || !details) {
+            return res.json(formattedPurchase);
+          }
+
+          formattedPurchase.products = details.map(detail => ({
+            product_id: detail.ProductID,
+            product_name: detail.ProductName || '',
+            category: detail.Category || 'General',
+            quantity: detail.Quantity || 0,
+            unit_cost: detail.UnitCost || 0,
+            unit_price: detail.UnitPrice || 0,
+            sub_total: detail.SubTotal || 0
+          }));
+
+          res.json(formattedPurchase);
+        });
+      }
+    });
   });
 });
 
@@ -1027,7 +1129,7 @@ backend.post('/api/payments', (req, res) => {
   if (!TraderID || Amount == null) {
     return res.status(400).json({ error: 'بيانات غير كاملة' });
   }
-  const now = PaymentDate || new Date().toISOString();
+  const now = PaymentDate || getCurrentDateTime();
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
 
@@ -1116,7 +1218,7 @@ backend.get('/api/payments/:traderId', (req, res) => {
 // CRUD Payments
 backend.put('/api/payments/:id', (req, res) => {
   const { Amount, PaymentDate, SaleID } = req.body;
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.run(
     'UPDATE payments SET Amount = ?, PaymentDate = ?, SaleID = ?, updated_at = ? WHERE PaymentID = ?',
     [Amount, PaymentDate, SaleID, now, req.params.id],
@@ -1137,7 +1239,7 @@ backend.delete('/api/payments/:id', (req, res) => {
 backend.post('/api/traders', (req, res) => {
   const { TraderName, Phone, Address, IsActive } = req.body;
   if (!TraderName) return res.status(400).json({ error: 'اسم التاجر مطلوب' });
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.run(
     'INSERT INTO traders (TraderName, Phone, Address, Balance, TotalSales, TotalPayments, IsActive, created_at, updated_at) VALUES (?, ?, ?, 0, 0, 0, ?, ?, ?)',
     [TraderName, Phone, Address, IsActive ? 1 : 0, now, now],
@@ -1149,7 +1251,7 @@ backend.post('/api/traders', (req, res) => {
 });
 backend.put('/api/traders/:id', (req, res) => {
   const { TraderName, Phone, Address, IsActive } = req.body;
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
   db.run(
     'UPDATE traders SET TraderName = ?, Phone = ?, Address = ?, IsActive = ?, updated_at = ? WHERE TraderID = ?',
     [TraderName, Phone, Address, IsActive ? 1 : 0, now, req.params.id],
@@ -1181,7 +1283,7 @@ backend.post('/api/manual-payments', (req, res) => {
     return res.status(400).json({ error: 'المبلغ غير صالح' });
   }
 
-  const now = new Date().toISOString();
+  const now = getCurrentDateTime();
 
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
@@ -1201,7 +1303,7 @@ backend.post('/api/manual-payments', (req, res) => {
       // Record payment
       db.run(
         'INSERT INTO payments (TraderID, Amount, PaymentDate, Notes, created_at) VALUES (?, ?, ?, ?, datetime(\'now\'))',
-        [TraderID, Amount, PaymentDate || new Date().toISOString(), Note || ''],
+        [TraderID, Amount, PaymentDate || getCurrentDateTime(), Note || ''],
         function(err) {
           if (err) {
             console.error('Error inserting payment:', err);
@@ -1310,25 +1412,6 @@ backend.post('/api/clear-data', (req, res) => {
   });
 });
 
-// Endpoint to fetch a single purchase with its detail lines
-backend.get('/api/purchases/:id', (req, res) => {
-  const id = req.params.id;
-  db.all(
-    `SELECT p.PurchaseID, p.SupplierName, p.PurchaseDate, p.Notes,
-            pd.PurchaseDetailID, pd.ProductID, pd.Quantity, pd.UnitCost, pd.SubTotal,
-            pr.ProductName
-     FROM purchases p
-     LEFT JOIN purchase_details pd ON p.PurchaseID = pd.PurchaseID
-     LEFT JOIN products pr ON pd.ProductID = pr.ProductID
-     WHERE p.PurchaseID = ?`,
-    [id], (err, rows) => {
-      if (err) return res.status(500).json({ error: 'خطأ في استرجاع المشتريات' });
-      if (!rows || rows.length === 0) return res.status(404).json({ error: 'سجل المشتريات غير موجود' });
-      res.json(rows);
-    }
-  );
-});
-
 backend.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
 });
@@ -1339,9 +1422,23 @@ function createWindow() {
     height: 800,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      // Add these settings to disable unnecessary Chrome features
+      enableWebSQL: false,
+      spellcheck: false,
+      autoHideMenuBar: true
     }
   });
+
+  // Disable autofill
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.executeJavaScript(`
+      document.querySelectorAll('input').forEach(input => {
+        input.setAttribute('autocomplete', 'off');
+      });
+    `);
+  });
+
   win.loadFile(path.join(__dirname, 'index.html'));
 }
 
@@ -1383,7 +1480,7 @@ ipcMain.handle('addManualPayment', async (event, payload) => {
       db.run(
         `INSERT INTO payments (TraderID, Amount, PaymentDate, Notes, created_at)
          VALUES (?, ?, ?, ?, datetime('now'))`,
-        [payload.TraderID, payload.Amount, payload.PaymentDate || new Date().toISOString(), payload.Note || ''],
+        [payload.TraderID, payload.Amount, payload.PaymentDate || getCurrentDateTime(), payload.Note || ''],
         function(err) {
           if (err) reject(err);
           resolve(this.lastID);
