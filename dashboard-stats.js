@@ -1,25 +1,28 @@
 // --- Dashboard Stats Page ---
 async function loadDashboardStats() {
   try {
-    const [productsRes, salesRes, purchasesRes, expensesRes, tradersRes] = await Promise.all([
+    const [productsRes, salesRes, purchasesRes, expensesRes, tradersRes, sale_detailsRes] = await Promise.all([
       fetch('http://localhost:3001/api/products'),
       fetch('http://localhost:3001/api/sales'),
       fetch('http://localhost:3001/api/purchases'),
       fetch('http://localhost:3001/api/expenses'),
       fetch('http://localhost:3001/api/traders'),
+      fetch('http://localhost:3001/api/sale_details')
     ]);
     const products = await productsRes.json();
     const sales = await salesRes.json();
+    const sale_details = await sale_detailsRes.json();
     const purchases = await purchasesRes.json();
     const expenses = await expensesRes.json();
     const traders = await tradersRes.json();
 
     // Stats calculations
     const totalProducts = products.length;
+    const sumProfit = sale_details.reduce((sum, s) => sum + (s.Profit || 0), 0);
     const totalSales = sales.reduce((sum, s) => sum + (s.TotalAmount || 0), 0);
     const totalPurchases = purchases.reduce((sum, p) => sum + (p.TotalAmount || 0), 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + (e.Amount || 0), 0);
-    const totalProfit = totalSales - (totalPurchases + totalExpenses);
+    const totalProfit = sumProfit - (totalPurchases + totalExpenses);
     const totalTraders = traders.length;
     const totalDebts = traders.reduce((sum, t) => sum + (t.Balance > 0 ? t.Balance : 0), 0);
 

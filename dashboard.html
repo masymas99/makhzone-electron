@@ -556,13 +556,7 @@
       html += '</tbody></table>';
       document.getElementById('content').innerHTML = html;
       document.getElementById('addExpenseBtn')?.addEventListener('click', showAddExpenseForm); // Add null check
-
-      // Add event listeners for edit/delete buttons
-      document.querySelectorAll('.edit-expense').forEach(btn => btn.addEventListener('click', () => showEditExpenseForm(btn.dataset.id)));
-      document.querySelectorAll('.delete-expense').forEach(btn => btn.addEventListener('click', () => deleteExpense(btn.dataset.id)));
-
-      // --- Add Expense Form ---
-function showAddExpenseForm() {
+      function showAddExpenseForm() {
   const html = `
     <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
       <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة مصروف جديد</h3>
@@ -613,6 +607,9 @@ function showAddExpenseForm() {
     }
   });
 }
+      // Add event listeners for edit/delete buttons
+      document.querySelectorAll('.edit-expense').forEach(btn => btn.addEventListener('click', () => showEditExpenseForm(btn.dataset.id)));
+      document.querySelectorAll('.delete-expense').forEach(btn => btn.addEventListener('click', () => deleteExpense(btn.dataset.id)));
 
       // Expenses filter logic
       const filterExpenses = () => {
@@ -1490,7 +1487,7 @@ function showAddExpenseForm() {
             sel.required = true;
             sel.innerHTML = '<option value="">-- اختر منتج --</option>';
             products.forEach(p => {
-                sel.innerHTML += `<option value="${p.ProductID}" data-price="${p.UnitPrice}" data-stock="${p.StockQuantity}">${p.ProductName} (متوفر: ${p.StockQuantity}, سعر: ${p.UnitPrice.toFixed(2)})</option>`;
+                sel.innerHTML += `<option value="${p.ProductID}" data-price="${p.UnitPrice}" data-stock="${p.StockQuantity}" data-cost="${p.UnitCost}">${p.ProductName} (متوفر: ${p.StockQuantity}, سعر: ${p.UnitPrice.toFixed(2)})</option>`;
             });
             sel.addEventListener('change', () => {
                  updateSaleTotal();
@@ -1519,6 +1516,12 @@ function showAddExpenseForm() {
             priceDisplay.id = `sPriceDisplay${rowId}`;
             priceDisplay.className = 'text-sm text-gray-500 w-20 text-center'; // Fixed width
             priceDisplay.textContent = 'سعر: -';
+
+            // UnitCost Display (Read-only)
+            const unitCostDisplay = document.createElement('input');
+            unitCostDisplay.type = 'hidden';
+            unitCostDisplay.id = `sUnitCost${rowId}`;
+            unitCostDisplay.name = `sUnitCost${rowId}`;
 
             // Remove Button
             const rm = document.createElement('button');
@@ -1615,7 +1618,7 @@ function showAddExpenseForm() {
                         ProductID: +ps.value,
                         Quantity: quantity,
                         UnitPrice: unitPrice, // Use the actual price at time of selection
-                        // UnitCost might not be needed here directly, but good to fetch if profit calc is done later
+                        UnitCost: +selectedOption.dataset.cost // Include unit cost
                     });
                 }
             });
@@ -1839,7 +1842,7 @@ function showAddExpenseForm() {
                 sel.innerHTML = '<option value="">-- اختر منتج --</option>';
                 products.forEach(p => {
                     const isSelected = detail && p.ProductID === detail.ProductID;
-                    sel.innerHTML += `<option value="${p.ProductID}" data-price="${p.UnitPrice}" data-stock="${p.StockQuantity}"${isSelected ? ' selected' : ''}>${p.ProductName} (متوفر: ${p.StockQuantity}, سعر: ${p.UnitPrice.toFixed(2)})</option>`;
+                    sel.innerHTML += `<option value="${p.ProductID}" data-price="${p.UnitPrice}" data-stock="${p.StockQuantity}" data-cost="${p.UnitCost}"${isSelected ? ' selected' : ''}>${p.ProductName} (متوفر: ${p.StockQuantity}, سعر: ${p.UnitPrice.toFixed(2)})</option>`;
                 });
                  sel.addEventListener('change', () => {
                      updateSaleTotal();
@@ -1861,6 +1864,11 @@ function showAddExpenseForm() {
                      checkStock(sel, inp);
                 });
 
+                const unitCostInput = document.createElement('input');
+                unitCostInput.type = 'hidden';
+                unitCostInput.id = `sUnitCost${rowId}`;
+                unitCostInput.name = `sUnitCost${rowId}`;
+
                 const rm = document.createElement('button');
                 rm.type = 'button';
                 rm.textContent = '×';
@@ -1870,15 +1878,9 @@ function showAddExpenseForm() {
                     updateSaleTotal();
                 });
 
-                div.append(sel, inp, rm);
-                productRowsContainer.append(div);
-                 // Auto-fill cost for existing detail on load
-                 if (detail) {
-                    const selectedOption = sel.options[sel.selectedIndex];
-                    if (selectedOption && selectedOption.value === String(detail.ProductID)) {
-                        // c.value = detail.UnitCost.toFixed(2); // Already set above
-                    }
-                 }
+                div.append(sel, inp, rm); // Add elements to the row div
+                productRowsContainer.append(div); // Add the row div to the container
+                updateSaleTotal(); // Update total when a new row is added
             };
 
              // Re-use updateSaleTotal function
@@ -1963,7 +1965,8 @@ function showAddExpenseForm() {
                             SaleDetailID: detailId, // Include original ID for matching on backend
                             ProductID: +ps.value,
                             Quantity: quantity,
-                            UnitPrice: unitPrice
+                            UnitPrice: unitPrice,
+                            UnitCost: +selectedOption.dataset.cost // Include unit cost
                         });
                     }
                 });
