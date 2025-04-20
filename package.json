@@ -4,20 +4,26 @@
   "description": "إعادة بناء مشروع المخزن بواجهة إلكترون جي إس ونود جي إس وقاعدة بيانات SQLite محلية.",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build:css": "tailwindcss -i ./public/css/styles.css -o ./public/css/output.css --minify",
+    "watch:css": "tailwindcss -i ./public/css/styles.css -o ./public/css/output.css --watch"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@fontsource/cairo": "^5.2.5",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "electron": "^35.1.5",
     "express": "^5.1.0",
+    "jimp": "^1.6.0",
+    "sharp": "^0.34.1",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.3",
-    "tailwindcss": "^4.1.4"
+    "autoprefixer": "^10.4.17",
+    "electron-builder": "^26.0.12",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1"
   }
 }

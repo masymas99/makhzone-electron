@@ -199,7 +199,19 @@ backend.post('/api/login', async (req, res) => {
     if (!match) {
       return res.status(400).json({ error: 'بيانات اعتماد غير صحيحة.' });
     }
-    res.json({ id: row.id, name: row.name, email: row.email });
+    
+    // Add expiration time (48 hours from now)
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 48);
+    
+    const userData = {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      expiresAt: expiresAt.toISOString()
+    };
+    
+    res.json(userData);
   });
 });
 

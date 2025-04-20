@@ -41,6 +41,26 @@ document.querySelector('#loginForm form').addEventListener('submit', async (e) =
   }
 });
 
+// Check if user is logged in and session is still valid
+function checkAuth() {
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (user) {
+    const expiresAt = new Date(user.expiresAt);
+    if (expiresAt < new Date()) {
+      // Session expired
+      localStorage.removeItem('user');
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+// If we're on the login page and already logged in, redirect to dashboard
+if (window.location.pathname.includes('index.html') && checkAuth()) {
+  window.location.href = 'dashboard.html';
+}
+
 document.querySelector('#registerForm form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msgDiv = document.getElementById('registerMsg'); msgDiv.textContent = '';

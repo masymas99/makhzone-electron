@@ -1,8 +1,25 @@
 // dashboard.js: handles UI interactions, data loading and routing for dashboard page
 // Auth guard and logout
-const user = JSON.parse(localStorage.getItem('user') || 'null');
-if (!user) window.location.href = 'index.html';
-document.getElementById('userName').innerText = user.name;
+function checkAuth() {
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (!user) {
+    window.location.href = 'index.html';
+    return false;
+  }
+  // Check expiration
+  const expiresAt = new Date(user.expiresAt);
+  if (expiresAt < new Date()) {
+    localStorage.removeItem('user');
+    window.location.href = 'index.html';
+    return false;
+  }
+  document.getElementById('userName').innerText = user.name;
+  return true;
+}
+
+// Check auth on page load
+checkAuth();
+
 document.getElementById('logout').addEventListener('click', () => {
     localStorage.removeItem('user');
     window.location.href = 'index.html';

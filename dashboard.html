@@ -4,11 +4,31 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' http://localhost:3001">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:3001">
   <title>لوحة التحكم</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="public/css/output.css" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: 'Cairo';
+      src: url('./node_modules/@fontsource/cairo/files/cairo-arabic-400-normal.woff2') format('woff2'),
+           url('./node_modules/@fontsource/cairo/files/cairo-arabic-400-normal.woff') format('woff');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Cairo';
+      src: url('./node_modules/@fontsource/cairo/files/cairo-arabic-600-normal.woff2') format('woff2'),
+           url('./node_modules/@fontsource/cairo/files/cairo-arabic-600-normal.woff') format('woff');
+      font-weight: 600;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Cairo';
+      src: url('./node_modules/@fontsource/cairo/files/cairo-arabic-700-normal.woff2') format('woff2'),
+           url('./node_modules/@fontsource/cairo/files/cairo-arabic-700-normal.woff') format('woff');
+      font-weight: 700;
+      font-style: normal;
+    }
     body {
       font-family: 'Cairo', sans-serif;
       transition: background-color 0.3s, color 0.3s;
