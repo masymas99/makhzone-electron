@@ -428,6 +428,14 @@ backend.delete('/api/sales/:id', (req, res) => {
   });
 });
 
+// API endpoint for fetching all sale details
+backend.get('/api/sale_details', (req, res) => {
+  db.all('SELECT * FROM sale_details', [], (err, details) => {
+    if (err) return res.status(500).json({ error: 'خطأ في استرجاع تفاصيل المبيعات' });
+    res.json(details);
+  });
+});
+
 // Products endpoints
 backend.get('/api/products', (req, res) => {
   db.all('SELECT * FROM products', [], (err, rows) => {
