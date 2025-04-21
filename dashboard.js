@@ -33,7 +33,7 @@ async function loadSales() {
     if (!res.ok) html += `<p class="text-red-600">${data.error}</p>`;
     else if (data.length === 0) html += '<p>لا توجد فواتير.</p>';
     else {
-        html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">التاجر</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th></tr></thead><tbody>';
+        html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">العميل</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th></tr></thead><tbody>';
         data.forEach(s => {
             html += `<tr><td class="border px-2 py-1">${s.SaleID}</td><td class="border px-2 py-1">${s.trader?.TraderName || '-'}<\/td><td class="border px-2 py-1">${s.SaleDate}</td><td class="border px-2 py-1">${s.TotalAmount}</td><\/tr>`;
         });
@@ -77,8 +77,8 @@ async function loadTraders() {
     const res = await fetch('http://localhost:3001/api/traders');
     const data = await res.json();
     let html = '<div class="flex justify-between items-center mb-4">'
-        + '<h2 class="text-2xl">التجار</h2>'
-        + '<button id="addTraderBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة تاجر</button>'
+        + '<h2 class="text-2xl">العملاء</h2>'
+        + '<button id="addTraderBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة عميل</button>'
         + '</div>';
     html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الاسم</th><th class="border px-2 py-1">الرصيد</th></tr></thead><tbody>';
     if (res.ok && data.length) {
@@ -175,7 +175,14 @@ async function loadPurchases() {
                         const purchase = await res.json();
                         showEditPurchaseForm(purchase);
                     } catch (error) {
-                        alert(`خطأ: ${error.message}`);
+                        Swal.fire({
+  title: 'خطأ',
+  text: error.message,
+  icon: 'error',
+  confirmButtonText: 'موافق',
+  cancelButtonText: 'إلغاء',
+  showCancelButton: true
+});
                         console.error('Error loading purchase:', error);
                     }
                 });
@@ -185,7 +192,17 @@ async function loadPurchases() {
                 btn.addEventListener('click', async () => {
                     try {
                         const id = btn.dataset.id;
-                        if (!confirm('هل أنت متأكد من حذف هذه المشتريات؟')) return;
+                        const { value: confirmed } = await Swal.fire({
+  title: 'هل أنت متأكد؟',
+  text: 'هل أنت متأكد من حذف هذه المشتريات؟',
+  icon: 'warning',
+  showCancelButton: true,
+  confirmButtonText: 'نعم، احذف',
+  cancelButtonText: 'إلغاء',
+  confirmButtonColor: '#d33',
+  cancelButtonColor: '#3085d6'
+});
+if (!confirmed) return;
                         
                         const res = await fetch(`http://localhost:3001/api/purchases/${id}`, {
                             method: 'DELETE'
@@ -199,7 +216,14 @@ async function loadPurchases() {
                             throw new Error(result.error || 'خطأ في حذف المشتريات');
                         }
                     } catch (error) {
-                        alert(`خطأ: ${error.message}`);
+                        Swal.fire({
+  title: 'خطأ',
+  text: error.message,
+  icon: 'error',
+  confirmButtonText: 'موافق',
+  cancelButtonText: 'إلغاء',
+  showCancelButton: true
+});
                         console.error('Error deleting purchase:', error);
                     }
                 });
@@ -257,7 +281,7 @@ function showAddPaymentForm() {
       <h3 class="text-xl mb-4">إضافة دفعة</h3>
       <div id="paymentMsg"></div>
       <form id="paymentForm" class="space-y-4">
-        <input type="number" id="pTraderID" placeholder="ID التاجر" class="w-full border px-3 py-2 rounded" required />
+        <input type="number" id="pTraderID" placeholder="ID العميل" class="w-full border px-3 py-2 rounded" required />
         <input type="number" step="0.01" id="pAmount" placeholder="المبلغ" class="w-full border px-3 py-2 rounded" required />
         <input type="date" id="pDate" placeholder="التاريخ" class="w-full border px-3 py-2 rounded" required />
         <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">حفظ</button>
@@ -341,7 +365,7 @@ async function loadPayments() {
         + '<h2 class="text-2xl">الدفعات</h2>'
         + '<button id="addPaymentBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة دفعة</button>'
         + '</div>';
-    html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">ID التاجر</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
+    html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">ID العميل</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
     if (res.ok && data.length) {
         data.forEach(p => {
             html += `<tr>
@@ -400,7 +424,7 @@ function showAddProductForm() {
 function showAddTraderForm() {
     const html = `
     <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
-      <h3 class="text-xl mb-4">إضافة تاجر</h3>
+      <h3 class="text-xl mb-4">إضافة عميل</h3>
       <div id="traderMsg"></div>
       <form id="traderForm" class="space-y-4">
         <input type="text" id="tName" placeholder="الاسم" class="w-full border px-3 py-2 rounded" required />
@@ -464,8 +488,18 @@ function showEditProductForm(id) {
 }
 
 // delete product
-function deleteProduct(id) {
-    if (!confirm('هل أنت متأكد من حذف المنتج؟')) return;
+async function deleteProduct(id) {
+    const { value: confirmed } = await Swal.fire({
+  title: 'هل أنت متأكد؟',
+  text: 'هل أنت متأكد من حذف هذا المنتج؟',
+  icon: 'warning',
+  showCancelButton: true,
+  confirmButtonText: 'نعم، احذف',
+  cancelButtonText: 'إلغاء',
+  confirmButtonColor: '#d33',
+  cancelButtonColor: '#3085d6'
+});
+if (!confirmed) return;
     fetch(`http://localhost:3001/api/products/${id}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(() => loadProducts());
@@ -552,7 +586,17 @@ async function showEditPurchaseForm(id) {
 }
 
 async function deletePurchase(id) {
-    if (!confirm('هل أنت متأكد من حذف هذه المشتريات؟')) return;
+    const { value: confirmed } = await Swal.fire({
+  title: 'هل أنت متأكد؟',
+  text: 'هل أنت متأكد من حذف هذه المشتريات؟',
+  icon: 'warning',
+  showCancelButton: true,
+  confirmButtonText: 'نعم، احذف',
+  cancelButtonText: 'إلغاء',
+  confirmButtonColor: '#d33',
+  cancelButtonColor: '#3085d6'
+});
+if (!confirmed) return;
     try {
         // First get purchase details to know which products to update
         const res = await fetch(`http://localhost:3001/api/purchases/${id}`);
@@ -575,7 +619,14 @@ async function deletePurchase(id) {
         await loadPurchases();
         
     } catch (error) {
-        alert(`خطأ: ${error.message}`);
+        Swal.fire({
+  title: 'خطأ',
+  text: error.message,
+  icon: 'error',
+  confirmButtonText: 'موافق',
+  cancelButtonText: 'إلغاء',
+  showCancelButton: true
+});
         console.error('Error deleting purchase:', error);
     }
 };

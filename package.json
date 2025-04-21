@@ -6,7 +6,11 @@
   "scripts": {
     "start": "electron .",
     "build:css": "tailwindcss -i ./public/css/styles.css -o ./public/css/output.css --minify",
-    "watch:css": "tailwindcss -i ./public/css/styles.css -o ./public/css/output.css --watch"
+    "watch:css": "tailwindcss -i ./public/css/styles.css -o ./public/css/output.css --watch",
+    "build": "electron-builder build",
+    "build:win32": "electron-builder build --win --ia32",
+    "build:win64": "electron-builder build --win --x64",
+    "postinstall": "electron-builder install-app-deps"
   },
   "author": "",
   "license": "MIT",
@@ -14,16 +18,47 @@
     "@fontsource/cairo": "^5.2.5",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "electron": "^35.1.5",
     "express": "^5.1.0",
     "jimp": "^1.6.0",
     "sharp": "^0.34.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.6",
+    "sweetalert2": "^11.19.1"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
     "autoprefixer": "^10.4.17",
+    "electron": "^35.1.5",
     "electron-builder": "^26.0.12",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1"
+  },
+  "build": {
+    "appId": "com.makhzone.app",
+    "productName": "Makhzone",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "ar"
+      ],
+      "language": "1025",
+      "perMachine": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

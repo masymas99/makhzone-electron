@@ -23,7 +23,6 @@ function initDatabase() {
     if (err) {
       console.error('فشل فتح قاعدة البيانات:', err);
     } else {
-      console.log('تم فتح قاعدة البيانات بنجاح');
       db.serialize(() => {
         const ddl = `
         CREATE TABLE IF NOT EXISTS users (
@@ -154,7 +153,6 @@ function initDatabase() {
           if (err) {
             console.error('فشل إنشاء الجداول:', err);
           } else {
-            console.log('تم إنشاء جميع الجداول أو موجودة بالفعل');
           }
         });
       });
@@ -319,7 +317,7 @@ backend.post('/api/sales', (req, res) => {
           (err, lastRecord) => {
             if (err) {
               db.run('ROLLBACK');
-              return res.status(500).json({ error: 'خطأ في تحديث رصيد التاجر' });
+              return res.status(500).json({ error: 'خطأ في تحديث رصيد العميل' });
             }
             const totalSales = (lastRecord?.total_sales || 0) + totalAmount;
             const totalPayments = (lastRecord?.total_payments || 0) + (PaidAmount || 0);
@@ -407,16 +405,11 @@ backend.put('/api/sales/:id', (req, res) => {
 
 backend.delete('/api/sales/:id', (req, res) => {
   const id = req.params.id;
+  
   const now = getCurrentDateTime();
-
   db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
-    
     db.get('SELECT * FROM sales WHERE SaleID = ?', [id], (err, sale) => {
-      if (err || !sale) {
-        db.run('ROLLBACK');
-        return res.status(404).json({ error: 'فاتورة غير موجودة' });
-      }
+      if (err || !sale) return res.status(404).json({ error: 'فاتورة غير موجودة' });
       db.all('SELECT * FROM sale_details WHERE SaleID = ?', [id], (err, details) => {
         details.forEach(detail => {
           db.get(
@@ -444,22 +437,15 @@ backend.delete('/api/sales/:id', (req, res) => {
         db.run('UPDATE traders SET Balance = Balance - ?, TotalSales = TotalSales - ? WHERE TraderID = ?', [sale.TotalAmount, sale.TotalAmount, sale.TraderID]);
         db.run('DELETE FROM sale_details WHERE SaleID = ?', [id]);
         db.run('DELETE FROM sales WHERE SaleID = ?', [id], function(err) {
-          if (err) {
-            db.run('ROLLBACK');
-            return res.status(500).json({ error: 'خطأ في حذف الفاتورة' });
-          }
-          db.run('COMMIT', err => {
-            if (err) {
-              db.run('ROLLBACK');
-              return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
-            }
-            res.json({ deleted: this.changes });
-          });
+          if (err) return res.status(500).json({ error: 'خطأ في حذف الفاتورة' });
+          res.json({ deleted: this.changes });
         });
       });
     });
   });
 });
+
+// ... (باقي كود main.js) ...
 
 // API endpoint for fetching all sale details
 backend.get('/api/sale_details', (req, res) => {
@@ -636,14 +622,14 @@ backend.delete('/api/expenses/:id', (req, res) => {
 // Traders endpoints
 backend.get('/api/traders', (req, res) => {
   db.all('SELECT * FROM traders', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'خطأ في استرجاع التجار' });
+    if (err) return res.status(500).json({ error: 'خطأ في استرجاع العملاء' });
     res.json(rows);
   });
 });
 backend.get('/api/traders/:id', (req, res) => {
   db.get('SELECT * FROM traders WHERE TraderID = ?', [req.params.id], (err, row) => {
-    if (err) return res.status(500).json({ error: 'خطأ في استرجاع التاجر' });
-    if (!row) return res.status(404).json({ error: 'التاجر غير موجود' });
+    if (err) return res.status(500).json({ error: 'خطأ في استرجاع العميل' });
+    if (!row) return res.status(404).json({ error: 'العميل غير موجود' });
     res.json(row);
   });
 });
@@ -766,86 +752,6 @@ backend.post('/api/purchases', (req, res) => {
     );
   });
 });
-
-
-
-// Helper function to calculate weighted average cost
-function calculateWeightedAverageCost(oldQty, oldCost, newQty, newCost) {
-  const totalOldCost = (oldQty || 0) * (oldCost || 0);
-  const totalNewCost = (newQty || 0) * (newCost || 0);
-  const totalQuantity = (oldQty || 0) + (newQty || 0);
-  if (totalQuantity <= 0) return 0;
-  return (totalOldCost + totalNewCost) / totalQuantity;
-}
-
-// Helper function to reverse weighted average cost effect
-function reverseWeightedAverageCost(currentQty, currentCost, removedQty, removedCost) {
-    const currentTotalCost = (currentQty || 0) * (currentCost || 0);
-    const removedTotalCost = (removedQty || 0) * (removedCost || 0);
-    const remainingTotalCost = Math.max(0, currentTotalCost - removedTotalCost); // Ensure non-negative
-    const remainingQuantity = Math.max(0, (currentQty || 0) - (removedQty || 0)); // Ensure non-negative
-
-    if (remainingQuantity <= 0) return 0;
-    return remainingTotalCost / remainingQuantity;
-}
-
-backend.get('/api/purchases/:id', (req, res) => {
-  const id = req.params.id;
-
-  db.serialize(() => {
-    // 1. Get purchase header
-    db.get(`
-      SELECT
-        p.*,
-        COALESCE(s.Name, p.SupplierName) as SupplierDisplayName -- Use Supplier Name from suppliers table if linked
-      FROM purchases p
-      LEFT JOIN suppliers s ON p.SupplierName = s.Name -- Assuming SupplierName in purchases stores Name or ID
-      WHERE p.PurchaseID = ?
-    `, [id], (err, purchase) => {
-      if (err || !purchase) {
-        console.error('Error fetching purchase header:', err);
-        return res.status(404).json({ error: 'المشتريات غير موجودة' });
-      }
-
-      // 2. Get purchase details (products)
-      db.all(`
-        SELECT
-          pd.*,
-          pr.ProductName,
-          pr.Category,
-          pr.UnitPrice -- Include UnitPrice from product for reference in edit form
-        FROM purchase_details pd
-        LEFT JOIN products pr ON pd.ProductID = pr.ProductID
-        WHERE pd.PurchaseID = ?
-      `, [id], (err, details) => {
-        if (err) {
-          console.error('Error fetching purchase details:', err);
-          details = []; // Return empty array if fetching details fails
-        }
-
-        // Structure the response
-        res.json({
-          PurchaseID: purchase.PurchaseID,
-          SupplierName: purchase.SupplierDisplayName || purchase.SupplierName || '', // Use display name, fallback to original, then empty
-          PurchaseDate: purchase.PurchaseDate,
-          TotalAmount: purchase.TotalAmount, // Return the saved total amount
-          Notes: purchase.Notes || '',
-          products: details.map(d => ({
-            PurchaseDetailID: d.PurchaseDetailID, // Keep detail ID
-            ProductID: d.ProductID,
-            ProductName: d.ProductName || 'منتج محذوف', // Fallback name
-            Category: d.Category || 'غير محدد',
-            Quantity: d.Quantity,
-            UnitCost: d.UnitCost,
-            SubTotal: d.SubTotal,
-            UnitPrice: d.UnitPrice // Price from product table
-          }))
-        });
-      });
-    });
-  });
-});
-
 
 // Update purchase - IMPROVED
 backend.put('/api/purchases/:id', (req, res) => {
@@ -1361,13 +1267,13 @@ backend.delete('/api/payments/:id', (req, res) => {
 // CRUD Traders
 backend.post('/api/traders', (req, res) => {
   const { TraderName, Phone, Address, IsActive } = req.body;
-  if (!TraderName) return res.status(400).json({ error: 'اسم التاجر مطلوب' });
+  if (!TraderName) return res.status(400).json({ error: 'اسم العميل مطلوب' });
   const now = getCurrentDateTime();
   db.run(
     'INSERT INTO traders (TraderName, Phone, Address, Balance, TotalSales, TotalPayments, IsActive, created_at, updated_at) VALUES (?, ?, ?, 0, 0, 0, ?, ?, ?)',
     [TraderName, Phone, Address, IsActive ? 1 : 0, now, now],
     function(err) {
-      if (err) return res.status(500).json({ error: 'خطأ في إنشاء التاجر' });
+      if (err) return res.status(500).json({ error: 'خطأ في إنشاء العميل' });
       res.json({ TraderID: this.lastID });
     }
   );
@@ -1379,14 +1285,14 @@ backend.put('/api/traders/:id', (req, res) => {
     'UPDATE traders SET TraderName = ?, Phone = ?, Address = ?, IsActive = ?, updated_at = ? WHERE TraderID = ?',
     [TraderName, Phone, Address, IsActive ? 1 : 0, now, req.params.id],
     function(err) {
-      if (err) return res.status(500).json({ error: 'خطأ في تحديث التاجر' });
+      if (err) return res.status(500).json({ error: 'خطأ في تحديث العميل' });
       res.json({ changes: this.changes });
     }
   );
 });
 backend.delete('/api/traders/:id', (req, res) => {
   db.run('DELETE FROM traders WHERE TraderID = ?', [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: 'خطأ في حذف التاجر' });
+    if (err) return res.status(500).json({ error: 'خطأ في حذف العميل' });
     res.json({ deleted: this.changes });
   });
 });
@@ -1394,7 +1300,6 @@ backend.delete('/api/traders/:id', (req, res) => {
 // Manual payments endpoint
 backend.post('/api/manual-payments', (req, res) => {
   const { TraderID, Amount, PaymentDate, Note } = req.body;
-  console.log('Received payment data:', { TraderID, Amount, PaymentDate, Note });
 
   // Validate input
   if (!TraderID || !Amount || !PaymentDate) {
@@ -1416,11 +1321,11 @@ backend.post('/api/manual-payments', (req, res) => {
       if (err) {
         console.error('Error checking trader:', err);
         db.run('ROLLBACK');
-        return res.status(500).json({ error: 'خطأ في التحقق من التاجر' });
+        return res.status(500).json({ error: 'خطأ في التحقق من العميل' });
       }
       if (!trader) {
         db.run('ROLLBACK');
-        return res.status(400).json({ error: 'التاجر غير موجود' });
+        return res.status(400).json({ error: 'العميل غير موجود' });
       }
 
       // Record payment
@@ -1434,7 +1339,6 @@ backend.post('/api/manual-payments', (req, res) => {
             return res.status(500).json({ error: 'خطأ في تسجيل الدفعة', details: err.message });
           }
           const paymentID = this.lastID;
-          console.log('Payment inserted successfully with ID:', paymentID);
 
           // Update trader's balance
           db.run(
@@ -1536,7 +1440,6 @@ backend.post('/api/clear-data', (req, res) => {
 });
 
 backend.listen(PORT, () => {
-  console.log(`Backend running on http://localhost:${PORT}`);
 });
 
 function createWindow() {
@@ -1587,7 +1490,6 @@ app.on('will-quit', () => {
       if (err) {
         console.error('خطأ عند إغلاق قاعدة البيانات:', err);
       } else {
-        console.log('تم إغلاق قاعدة البيانات');
       }
     });
   }
