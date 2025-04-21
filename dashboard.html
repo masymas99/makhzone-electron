@@ -955,57 +955,62 @@ async function deleteExpense(expenseId) {
               <input type="text" id="pCategory" name="pCategory" placeholder="مثال: خضروات" class="mt-1 block w-full" required />
             </div>
             <div>
-              <label for="pStock" class="block text-sm font-medium text-gray-700 mb-1">الكمية الأولية بالمخزن</label>
-              <input type="number" id="pStock" name="pStock" min="0" placeholder="0" value="0" class="mt-1 block w-full" required />
-            </div>
-            <div>
               <label for="pPrice" class="block text-sm font-medium text-gray-700 mb-1">سعر بيع الوحدة</label>
               <input type="number" step="0.01" min="0" id="pPrice" name="pPrice" placeholder="0.00" class="mt-1 block w-full" required />
             </div>
-            <div>
-              <label for="pCost" class="block text-sm font-medium text-gray-700 mb-1">تكلفة شراء الوحدة (متوسط)</label>
-              <input type="number" step="0.01" min="0" id="pCost" name="pCost" placeholder="0.00" class="mt-1 block w-full" />
-            </div>
-             <div class="flex justify-end space-x-2 space-x-reverse pt-4">
-               <button type="button" id="cancelAddProduct" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
-               <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ المنتج</button>
+            <div class="flex justify-end space-x-2 space-x-reverse pt-4">
+              <button type="button" id="cancelAddProduct" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+              <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ المنتج</button>
             </div>
           </form>
         </div>
       `;
       document.getElementById('content').innerHTML = html;
-      document.getElementById('cancelAddProduct')?.addEventListener('click', loadProducts); // Go back
+      document.getElementById('cancelAddProduct')?.addEventListener('click', loadProducts);
 
       document.getElementById('productForm')?.addEventListener('submit', async e => {
         e.preventDefault();
         const msgDiv = document.getElementById('productMsg');
-        msgDiv.innerHTML = ''; // Clear previous messages
+        msgDiv.innerHTML = '';
+        
         const payload = {
           ProductName: document.getElementById('pName').value.trim(),
           Category: document.getElementById('pCategory').value.trim(),
-          StockQuantity: +document.getElementById('pStock').value,
           UnitPrice: +document.getElementById('pPrice').value,
-          UnitCost: document.getElementById('pCost').value ? +document.getElementById('pCost').value : null, // Handle optional cost
+          StockQuantity: 0, // سيتم تحديثه عند إضافة مشتريات
           IsActive: true
         };
 
-        // Basic validation
-        if (!payload.ProductName || !payload.Category || payload.StockQuantity < 0 || payload.UnitPrice < 0 || (payload.UnitCost !== null && payload.UnitCost < 0)) {
-            msgDiv.innerHTML = '<p class="text-red-600">يرجى ملء الحقول الإجبارية بقيم صحيحة.</p>';
-            return;
+        // التحقق من صحة البيانات
+        if (!payload.ProductName) {
+          msgDiv.innerHTML = '<p class="text-red-600">يرجى إدخال اسم المنتج</p>';
+          return;
+        }
+        if (!payload.Category) {
+          msgDiv.innerHTML = '<p class="text-red-600">يرجى إدخال تصنيف المنتج</p>';
+          return;
+        }
+        if (isNaN(payload.UnitPrice) || payload.UnitPrice <= 0) {
+          msgDiv.innerHTML = '<p class="text-red-600">يرجى إدخال سعر بيع صحيح</p>';
+          return;
         }
 
         try {
-          const res = await fetch('http://localhost:3001/api/products', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const res = await fetch('http://localhost:3001/api/products', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+          });
+          
           const data = await res.json();
           if (res.ok) {
-              loadProducts(); // Reload on success
+            loadProducts(); // إعادة تحميل قائمة المنتجات بعد الإضافة بنجاح
           } else {
-              msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء الحفظ.'}</p>`;
+            msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ أثناء حفظ المنتج'}</p>`;
           }
         } catch (error) {
-            console.error("Error adding product:", error);
-            msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم.</p>';
+          console.error("Error adding product:", error);
+          msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم</p>';
         }
       });
     }

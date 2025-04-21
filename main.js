@@ -49,9 +49,9 @@ function initDatabase() {
           ProductID INTEGER PRIMARY KEY AUTOINCREMENT,
           ProductName TEXT NOT NULL,
           Category TEXT NOT NULL DEFAULT 'General',
-          StockQuantity INTEGER NOT NULL,
-          UnitPrice REAL NOT NULL,
-          UnitCost REAL NOT NULL,
+          StockQuantity INTEGER NOT NULL DEFAULT 0,
+          UnitPrice REAL NOT NULL DEFAULT 0,
+          UnitCost REAL NOT NULL ,
           IsActive INTEGER NOT NULL DEFAULT 1,
           created_at DATETIME,
           updated_at DATETIME
@@ -484,55 +484,84 @@ backend.get('/api/products/:id', (req, res) => {
   });
 });
 
-// Enhanced product creation: also record purchase if initial stock > 0
 backend.post('/api/products', (req, res) => {
-  const { ProductName, Category, StockQuantity, UnitPrice, UnitCost, IsActive } = req.body;
-  if (!ProductName) return res.status(400).json({ error: 'اسم المنتج مطلوب' });
-  const now = getCurrentDateTime();
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
+  try {
+    const { ProductName, Category, UnitPrice, StockQuantity } = req.body;
+    
+    // Validate required fields
+    if (!ProductName || typeof ProductName !== 'string') {
+      return res.status(400).json({ 
+        success: false,
+        error: 'اسم المنتج مطلوب ويجب أن يكون نصاً',
+        field: 'ProductName' 
+      });
+    }
+    
+    // Validate numeric fields
+    if (UnitPrice && isNaN(parseFloat(UnitPrice))) {
+      return res.status(400).json({
+        success: false,
+        error: 'سعر البيع يجب أن يكون رقماً',
+        field: 'UnitPrice'
+      });
+    }
+
+    if (StockQuantity && isNaN(parseInt(StockQuantity))) {
+      return res.status(400).json({
+        success: false,
+        error: 'الكمية يجب أن تكون رقماً صحيحاً',
+        field: 'StockQuantity'
+      });
+    }
+
+    const now = getCurrentDateTime();
+    const params = [
+      ProductName.trim(),
+      Category?.trim() || 'General',
+      parseInt(StockQuantity || 0),
+      parseFloat(UnitPrice || 0),
+      0,  // Initial UnitCost
+      1,  // IsActive
+      now,
+      now
+    ];
+    
     db.run(
       'INSERT INTO products (ProductName, Category, StockQuantity, UnitPrice, UnitCost, IsActive, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [ProductName, Category || 'General', StockQuantity || 0, UnitPrice || 0, UnitCost || 0, IsActive ? 1 : 0, now, now],
+      params,
       function(err) {
         if (err) {
-          db.run('ROLLBACK');
-          return res.status(500).json({ error: 'خطأ في إنشاء المنتج' });
-        }
-        const productID = this.lastID;
-        const qty = StockQuantity || 0;
-        const cost = UnitCost || 0;
-        if (qty > 0) {
-          const total = qty * cost;
-          db.run(
-            'INSERT INTO purchases (ProductID, Quantity, UnitCost, TotalAmount, PurchaseDate, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [productID, qty, cost, total, now, now, now],
-            function(pErr) {
-              if (pErr) {
-                db.run('ROLLBACK');
-                return res.status(500).json({ error: 'خطأ في تسجيل المشتريات' });
-              }
-              db.run('COMMIT', commitErr => {
-                if (commitErr) {
-                  db.run('ROLLBACK');
-                  return res.status(500).json({ error: 'خطأ في إتمام العملية' });
-                }
-                res.json({ ProductID: productID, PurchaseID: this.lastID });
-              });
-            }
-          );
-        } else {
-          db.run('COMMIT', commitErr => {
-            if (commitErr) {
-              db.run('ROLLBACK');
-              return res.status(500).json({ error: 'خطأ في إتمام العملية' });
-            }
-            res.json({ ProductID: productID });
+          console.error('Product creation error:', err);
+          return res.status(500).json({ 
+            success: false,
+            error: 'خطأ في إنشاء المنتج',
+            details: err.message
           });
         }
+        
+        res.json({
+          success: true,
+          product: {
+            ProductID: this.lastID,
+            ProductName: ProductName,
+            Category: Category || 'General',
+            StockQuantity: parseInt(StockQuantity || 0),
+            UnitPrice: parseFloat(UnitPrice || 0),
+            UnitCost: 0,
+            IsActive: true
+          },
+          message: 'تم إنشاء المنتج بنجاح'
+        });
       }
     );
-  });
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'خطأ غير متوقع في النظام',
+      details: err.message
+    });
+  }
 });
 
 backend.put('/api/products/:id', (req, res) => {
