@@ -1394,18 +1394,14 @@ async function deleteExpense(expenseId) {
     }
     // delete trader
 async function deleteTrader(id) {
-  // First confirmation dialog
 
 
-  // If first confirmation passed, show final warning
  
     const finalResult = await Swal.fire({ 
       title: 'تأكيد نهائي',
       text: `هل أنت متأكد تماماً من حذف التاجر رقم ${id}؟ لا يمكن التراجع عن هذا الإجراء.`, 
       icon: 'warning', 
       showCancelButton: true, 
-    //   confirmButtonColor: '#3b82f6', // Changed to blue-500
-    //   cancelButtonColor: '#dc2626', // Changed to red-600  
       confirmButtonText: 'نعم، احذف!', 
       cancelButtonText: 'إلغاء', 
       buttonsStyling: true, 
@@ -2071,6 +2067,7 @@ async function deleteTrader(id) {
                 console.log("Sale Response:", data); // Log response
 
                 if (res.ok) {
+                    // Removed automatic payment creation
                     loadSales(); // Reload sales list on success
                 } else {
                     msgDiv.innerHTML = `<p class="text-red-600">${data.error || 'حدث خطأ غير متوقع أثناء حفظ الفاتورة.'}</p>`;

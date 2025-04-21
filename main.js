@@ -283,24 +283,11 @@ backend.post('/api/sales', (req, res) => {
           [totalAmount, remaining, now, saleID]
         );
 
-        // Record payment in payments table if PaidAmount > 0
+        // Update trader_financials with sale info
         if (PaidAmount > 0) {
           db.run(
-            'INSERT INTO payments (TraderID, SaleID, PaymentDate, Amount, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-            [TraderID, saleID, now, PaidAmount, now, now],
-            function(err) {
-              if (err) {
-                db.run('ROLLBACK');
-                return res.status(500).json({ error: 'خطأ في تسجيل الدفعة' });
-              }
-              const paymentID = this.lastID;
-
-              // Update trader_financials
-              db.run(
-                'INSERT INTO trader_financials (trader_id, sale_id, payment_id, sale_amount, payment_amount, balance, total_sales, total_payments, remaining_amount, transaction_type, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [TraderID, saleID, paymentID, totalAmount, PaidAmount, totalAmount - PaidAmount, totalAmount, PaidAmount, remaining, 'sale', 'فاتورة مبيعات', now, now]
-              );
-            }
+            'INSERT INTO trader_financials (trader_id, sale_id, sale_amount, payment_amount, balance, total_sales, total_payments, remaining_amount, transaction_type, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [TraderID, saleID, totalAmount, PaidAmount, totalAmount - PaidAmount, totalAmount, PaidAmount, remaining, 'sale', 'فاتورة مبيعات', now, now]
           );
         } else {
           // Update trader_financials without payment
