@@ -1393,22 +1393,50 @@ async function deleteExpense(expenseId) {
         }
     }
     // delete trader
-    async function deleteTrader(id) {
-      Swal.fire({title: 'هل أنت متأكد؟',text: `هل أنت متأكد من حذف التاجر رقم ${id}؟ سيتم حذف جميع الفواتير والدفعات المرتبطة به!`,icon: 'warning',showCancelButton: true,confirmButtonColor: '#3085d6',cancelButtonColor: '#d33',confirmButtonText: 'نعم',cancelButtonText: 'لا'}).then((result) => {if (result.isConfirmed) {}});
+async function deleteTrader(id) {
+  // First confirmation dialog
+
+
+  // If first confirmation passed, show final warning
+ 
+    const finalResult = await Swal.fire({ 
+      title: 'تأكيد نهائي',
+      text: `هل أنت متأكد تماماً من حذف التاجر رقم ${id}؟ لا يمكن التراجع عن هذا الإجراء.`, 
+      icon: 'warning', 
+      showCancelButton: true, 
+    //   confirmButtonColor: '#3b82f6', // Changed to blue-500
+    //   cancelButtonColor: '#dc2626', // Changed to red-600  
+      confirmButtonText: 'نعم، احذف!', 
+      cancelButtonText: 'إلغاء', 
+      buttonsStyling: true, 
+      customClass: { 
+        confirmButton: 'bg-blue-500 hover:bg-blue-600 focus:ring-2 focus:ring-blue-300', 
+        cancelButton: 'bg-red-500 hover:bg-red-700 focus:ring-2 focus:ring-red-300' 
+      }
+
+    
+
+
+    });
+
+    // Only proceed with deletion if final confirmation passed
+    if (finalResult.isConfirmed) {
       try {
-          const res = await fetch(`http://localhost:3001/api/traders/${id}`, { method: 'DELETE' });
-          const data = await res.json();
-           if (res.ok) {
-               Swal.fire({icon: 'success', title: 'تم الحذف', text: 'تم حذف التاجر وجميع بياناته المرتبطة بنجاح.'});
-               loadTraders(); // Refresh list
-           } else {
-                Swal.fire({icon: 'error', title: 'فشل الحذف', text: `فشل حذف التاجر: ${data.error || 'خطأ غير معروف.'}`});
-           }
+        const res = await fetch(`http://localhost:3001/api/traders/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+          Swal.fire({icon: 'success', title: 'تم الحذف', text: 'تم حذف التاجر وجميع بياناته المرتبطة بنجاح.'});
+          loadTraders(); // Refresh list
+        } else {
+          Swal.fire({icon: 'error', title: 'فشل الحذف', text: `فشل حذف التاجر: ${data.error || 'خطأ غير معروف.'}`});
+        }
       } catch(error) {
-           console.error("Error deleting trader:", error);
-           Swal.fire({icon: 'error', title: 'خطأ', text: 'حدث خطأ أثناء محاولة حذف التاجر.'});
+        console.error("Error deleting trader:", error);
+        Swal.fire({icon: 'error', title: 'خطأ', text: 'حدث خطأ أثناء محاولة حذف التاجر.'});
       }
     }
+  }
+
     // show trader details - Enhanced
     async function showTraderDetails(id) { // Add flag
         try {
