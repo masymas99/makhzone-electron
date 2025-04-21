@@ -144,7 +144,7 @@
             <svg class="sidebar-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <span class="sidebar-text text-lg font-medium">التجار</span>
+            <span class="sidebar-text text-lg font-medium">العملاء</span>
           </a>
         </li>
         <li>
@@ -232,7 +232,7 @@
       else if (data.length === 0) html += '<p>لا توجد فواتير.</p>';
       else {
         html += '<table class="min-w-full bg-white border">';
-        html += '<thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">التاجر</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th><th class="border px-2 py-1">الإجراءات</th></tr></thead>';
+        html += '<thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">العميل</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">الإجمالي</th><th class="border px-2 py-1">الإجراءات</th></tr></thead>';
         html += '<tbody>';
         data.forEach(s => {
           html += `<tr class="table-row" data-sale-date="${formatDateForInput(s.SaleDate)}" data-sale-total="${(s.TotalAmount || 0).toFixed(2)}">
@@ -353,8 +353,8 @@
       const res = await fetch('http://localhost:3001/api/traders');
       const data = await res.json();
       let html = '<div class="flex justify-between items-center mb-4">'
-        + '<h2 class="text-2xl">التجار</h2>'
-        + '<button id="addTraderBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة تاجر</button>'
+        + '<h2 class="text-2xl">العملاء</h2>'
+        + '<button id="addTraderBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إضافة عميل</button>'
       + '</div>';
       html += '<div class="mb-4"><input type="text" id="tradersSearchInput" placeholder="بحث..." class="border px-3 py-2 rounded w-full"></div>';
       html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID</th><th class="border px-2 py-1">الاسم</th><th class="border px-2 py-1">الرصيد الحالي</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
@@ -1022,7 +1022,7 @@ async function deleteExpense(expenseId) {
                 throw new Error(errData.error || 'Failed to load payments');
             }
             const data = await res.json();
-            let html = '<h2 class="text-2xl mb-4">الدفعات اليدوية للتجار</h2>'; // Clarify these are manual payments
+            let html = '<h2 class="text-2xl mb-4">الدفعات اليدوية للعملاء</h2>'; // Clarify these are manual payments
             html += '<div class="mb-4 grid grid-cols-1 md:grid-cols-5 gap-4">'
                 + '<label class="block mb-2" for="paymentsFilterStart">من تاريخ</label>'
                 + '<input type="date" id="paymentsFilterStart" class="border px-3 py-2 rounded" />'
@@ -1033,9 +1033,9 @@ async function deleteExpense(expenseId) {
                 + '<label class="block mb-2" for="paymentsFilterMax">الحد الأقصى للمبلغ</label>'
                 + '<input type="number" id="paymentsFilterMax" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />'
                 + '<label class="block mb-2" for="paymentsFilterText">بحث نصي</label>'
-                + '<input type="text" id="paymentsFilterText" placeholder="بحث بالوصف أو التاريخ أو اسم التاجر..." class="border px-3 py-2 rounded" />'
+                + '<input type="text" id="paymentsFilterText" placeholder="بحث بالوصف أو التاريخ أو اسم العميل..." class="border px-3 py-2 rounded" />'
             + '</div>';
-            html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الدفعة</th><th class="border px-2 py-1">ID التاجر</th><th class="border px-2 py-1">اسم التاجر</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">ملاحظات</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
+            html += '<table class="min-w-full bg-white border"><thead><tr><th class="border px-2 py-1">ID الدفعة</th><th class="border px-2 py-1">ID العميل</th><th class="border px-2 py-1">اسم العميل</th><th class="border px-2 py-1">المبلغ</th><th class="border px-2 py-1">التاريخ</th><th class="border px-2 py-1">ملاحظات</th><th class="border px-2 py-1">الإجراءات</th></tr></thead><tbody>';
             if (data.length > 0) {
                 // Sort payments by date descending (newest first)
                 data.sort((a, b) => new Date(b.PaymentDate) - new Date(a.PaymentDate));
@@ -1171,12 +1171,12 @@ async function deleteExpense(expenseId) {
     function showAddTraderForm() {
       const html = `
         <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
-          <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة تاجر جديد</h3>
+          <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة عميل جديد</h3>
           <div id="traderMsg" class="mb-4"></div>
           <form id="traderForm" class="space-y-4">
             <div>
-                <label for="tName" class="block text-sm font-medium text-gray-700 mb-1">اسم التاجر</label>
-                <input type="text" id="tName" name="tName" placeholder="اسم التاجر بالكامل" class="mt-1 block w-full" required />
+                <label for="tName" class="block text-sm font-medium text-gray-700 mb-1">اسم العميل</label>
+                <input type="text" id="tName" name="tName" placeholder="اسم العميل بالكامل" class="mt-1 block w-full" required />
             </div>
             <div>
                 <label for="tPhone" class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
@@ -1184,11 +1184,11 @@ async function deleteExpense(expenseId) {
             </div>
              <div>
                 <label for="tAddress" class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
-                <input type="text" id="tAddress" name="tAddress" placeholder="عنوان التاجر (اختياري)" class="mt-1 block w-full" />
+                <input type="text" id="tAddress" name="tAddress" placeholder="عنوان العميل (اختياري)" class="mt-1 block w-full" />
             </div>
             <div class="flex justify-end space-x-2 space-x-reverse pt-4">
                <button type="button" id="cancelAddTrader" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
-               <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ التاجر</button>
+               <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">حفظ العميل</button>
             </div>
           </form>
         </div>
@@ -1208,7 +1208,7 @@ async function deleteExpense(expenseId) {
         };
 
         if (!payload.TraderName) {
-            msgDiv.innerHTML = '<p class="text-red-600">اسم التاجر مطلوب.</p>';
+            msgDiv.innerHTML = '<p class="text-red-600">اسم العميل مطلوب.</p>';
             return;
         }
 
@@ -1330,12 +1330,12 @@ async function deleteExpense(expenseId) {
             const t = await res.json();
             const html = `
                 <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
-                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل بيانات التاجر #${id}</h3>
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل بيانات العميل #${id}</h3>
                 <div id="traderMsg" class="mb-4"></div>
                 <form id="editTraderForm" class="space-y-4">
                     <input type="hidden" id="editTraderId" value="${t.TraderID}">
                     <div>
-                        <label for="eName" class="block text-sm font-medium text-gray-700 mb-1">اسم التاجر</label>
+                        <label for="eName" class="block text-sm font-medium text-gray-700 mb-1">اسم العميل</label>
                         <input type="text" id="eName" name="eName" value="${t.TraderName}" class="mt-1 block w-full" required />
                     </div>
                     <div>
@@ -1344,7 +1344,7 @@ async function deleteExpense(expenseId) {
                     </div>
                     <div>
                         <label for="eAddress" class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
-                        <input type="text" id="eAddress" name="eAddress" value="${t.Address || ''}" placeholder="عنوان التاجر (اختياري)" class="mt-1 block w-full" />
+                        <input type="text" id="eAddress" name="eAddress" value="${t.Address || ''}" placeholder="عنوان العميل (اختياري)" class="mt-1 block w-full" />
                     </div>
                     <div class="flex justify-end space-x-2 space-x-reverse pt-4">
                        <button type="button" id="cancelEditTrader" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
@@ -1369,7 +1369,7 @@ async function deleteExpense(expenseId) {
                 };
 
                  if (!payload.TraderName) {
-                    msgDiv.innerHTML = '<p class="text-red-600">اسم التاجر مطلوب.</p>';
+                    msgDiv.innerHTML = '<p class="text-red-600">اسم العميل مطلوب.</p>';
                     return;
                 }
 
@@ -1388,7 +1388,7 @@ async function deleteExpense(expenseId) {
             });
 
         } catch (error) {
-             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات التاجر: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة التجار</button>`;
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات العميل: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة العملاء</button>`;
              console.error("Error loading trader for edit:", error);
         }
     }
@@ -1399,7 +1399,7 @@ async function deleteTrader(id) {
  
     const finalResult = await Swal.fire({ 
       title: 'تأكيد نهائي',
-      text: `هل أنت متأكد تماماً من حذف التاجر رقم ${id}؟ لا يمكن التراجع عن هذا الإجراء.`, 
+      text: `هل أنت متأكد تماماً من حذف العميل رقم ${id}؟ لا يمكن التراجع عن هذا الإجراء.`, 
       icon: 'warning', 
       showCancelButton: true, 
       confirmButtonText: 'نعم، احذف!', 
@@ -1421,14 +1421,14 @@ async function deleteTrader(id) {
         const res = await fetch(`http://localhost:3001/api/traders/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (res.ok) {
-          Swal.fire({icon: 'success', title: 'تم الحذف', text: 'تم حذف التاجر وجميع بياناته المرتبطة بنجاح.'});
+          Swal.fire({icon: 'success', title: 'تم الحذف', text: 'تم حذف العميل وجميع بياناته المرتبطة بنجاح.'});
           loadTraders(); // Refresh list
         } else {
-          Swal.fire({icon: 'error', title: 'فشل الحذف', text: `فشل حذف التاجر: ${data.error || 'خطأ غير معروف.'}`});
+          Swal.fire({icon: 'error', title: 'فشل الحذف', text: `فشل حذف العميل: ${data.error || 'خطأ غير معروف.'}`});
         }
       } catch(error) {
         console.error("Error deleting trader:", error);
-        Swal.fire({icon: 'error', title: 'خطأ', text: 'حدث خطأ أثناء محاولة حذف التاجر.'});
+        Swal.fire({icon: 'error', title: 'خطأ', text: 'حدث خطأ أثناء محاولة حذف العميل.'});
       }
     }
   }
@@ -1442,8 +1442,8 @@ async function deleteTrader(id) {
                 fetch(`http://localhost:3001/api/payments?trader=${id}`) // Fetch manual payments for this trader
             ]);
 
-            if (!traderRes.ok) throw new Error('لم يتم العثور على التاجر');
-            const trader = traderRes.ok ? await traderRes.json() : { TraderName: `تاجر #${id}`};
+            if (!traderRes.ok) throw new Error('لم يتم العثور على العميل');
+            const trader = traderRes.ok ? await traderRes.json() : { TraderName: `عميل #${id}`};
             const sales = salesRes.ok ? await salesRes.json() : [];
             const payments = paymentsRes.ok ? await paymentsRes.json() : [];
 
@@ -1458,8 +1458,8 @@ async function deleteTrader(id) {
 
             let html = `<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">`;
             html += `<div class="flex justify-between items-center mb-6">
-                        <h3 class="text-2xl font-semibold text-gray-800">تفاصيل التاجر: ${trader.TraderName}</h3>
-                        <button id="backToTradersBtn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لقائمة التجار</button>
+                        <h3 class="text-2xl font-semibold text-gray-800">تفاصيل العميل: ${trader.TraderName}</h3>
+                        <button id="backToTradersBtn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لقائمة العملاء</button>
                      </div>`;
 
             // Trader Info Section
@@ -1475,7 +1475,7 @@ async function deleteTrader(id) {
 
             // Add Manual Payment Form Section
             html += `<div class="mt-6 mb-6 p-4 bg-gray-50 rounded border border-gray-200">
-                        <h4 class="text-lg font-semibold mb-3 text-gray-700">إضافة دفعة يدوية لهذا التاجر</h4>
+                        <h4 class="text-lg font-semibold mb-3 text-gray-700">إضافة دفعة يدوية لهذا العميل</h4>
                         <div id="manualPaymentMsg" class="mb-3"></div>
                         <form id="manualPaymentForm" class="space-y-3">
                         <input type="hidden" id="manualTraderId" value="${trader.TraderID}">
@@ -1511,7 +1511,7 @@ async function deleteTrader(id) {
                 });
                 html += `</tbody></table>`;
             } else {
-                html += `<p class="text-gray-500">لا توجد فواتير مسجلة لهذا التاجر.</p>`;
+                html += `<p class="text-gray-500">لا توجد فواتير مسجلة لهذا العميل.</p>`;
             }
             html += `</div>`;
 
@@ -1527,7 +1527,7 @@ async function deleteTrader(id) {
                 });
                 html += `</tbody></table>`;
             } else {
-                html += `<p class="text-gray-500">لا توجد دفعات يدوية مسجلة لهذا التاجر.</p>`;
+                html += `<p class="text-gray-500">لا توجد دفعات يدوية مسجلة لهذا العميل.</p>`;
             }
             html += `</div>`;
 
@@ -1611,7 +1611,7 @@ async function deleteTrader(id) {
             }
 
         } catch (error) {
-            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل تفاصيل التاجر: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة التجار</button>`;
+            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل تفاصيل العميل: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة العملاء</button>`;
             console.error("Error showing trader details:", error);
         }
     }
@@ -1621,11 +1621,11 @@ async function deleteTrader(id) {
         try {
             // Optional: Fetch trader name to display
             const traderRes = await fetch(`http://localhost:3001/api/traders/${traderId}`);
-            const trader = traderRes.ok ? await traderRes.json() : { TraderName: `تاجر #${traderId}`};
+            const trader = traderRes.ok ? await traderRes.json() : { TraderName: `عميل #${traderId}`};
 
             const html = `
             <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
-                <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة دفعة يدوية للتاجر: ${trader.TraderName}</h3>
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">إضافة دفعة يدوية للعميل: ${trader.TraderName}</h3>
                 <div id="manualPaymentMsg" class="mb-4"></div>
                 <form id="manualPaymentFormStandalone" class="space-y-4">
                     <input type="hidden" id="manualTraderId" value="${traderId}">
@@ -1696,7 +1696,7 @@ async function deleteTrader(id) {
             });
 
         } catch (error) {
-             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات التاجر: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة التجار</button>`;
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحميل بيانات العميل: ${error.message}</p><button onclick="loadTraders()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة العملاء</button>`;
              console.error("Error preparing manual payment form:", error);
         }
     }
@@ -1711,7 +1711,7 @@ async function deleteTrader(id) {
             const payment = await res.json();
 
             // Fetch trader name for display
-            let traderName = `تاجر #${payment.TraderID}`;
+            let traderName = `عميل #${payment.TraderID}`;
             try {
                 const traderRes = await fetch(`http://localhost:3001/api/traders/${payment.TraderID}`);
                 if (traderRes.ok) {
@@ -1723,7 +1723,7 @@ async function deleteTrader(id) {
 
             const html = `
             <div class="max-w-md mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
-                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل الدفعة #${paymentId} للتاجر: ${traderName}</h3>
+                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل الدفعة #${paymentId} للعميل: ${traderName}</h3>
                 <div id="paymentMsg" class="mb-4"></div>
                 <form id="editPaymentForm" class="space-y-4">
                     <input type="hidden" id="editPaymentId" value="${payment.PaymentID}">
@@ -1823,7 +1823,7 @@ async function deleteTrader(id) {
             fetch('http://localhost:3001/api/products?active=true') // Fetch only active products
         ]);
         if (!trRes.ok || !prodRes.ok) {
-            throw new Error('فشل تحميل بيانات التجار أو المنتجات');
+            throw new Error('فشل تحميل بيانات العملاء أو المنتجات');
         }
         const [traders, products] = await Promise.all([trRes.json(), prodRes.json()]);
 
@@ -1833,9 +1833,9 @@ async function deleteTrader(id) {
             <div id="saleMsg" class="mb-4"></div>
             <form id="saleForm" class="space-y-4">
                 <div>
-                    <label for="sTrader" class="block text-sm font-medium text-gray-700 mb-1">التاجر</label>
+                    <label for="sTrader" class="block text-sm font-medium text-gray-700 mb-1">العميل</label>
                     <select id="sTrader" name="sTrader" class="w-full" required>
-                    <option value="">-- اختر تاجر --</option>`;
+                    <option value="">-- اختر عميل --</option>`;
         traders.forEach(t => { html += `<option value="${t.TraderID}">${t.TraderName}</option>`; });
         html += `
                     </select>
@@ -2028,7 +2028,7 @@ async function deleteTrader(id) {
             });
 
             if (!TraderID || !SaleDate) {
-                msgDiv.innerHTML = '<p class="text-red-600">يرجى اختيار تاجر وتحديد تاريخ الفاتورة.</p>';
+                msgDiv.innerHTML = '<p class="text-red-600">يرجى اختيار عميل وتحديد تاريخ الفاتورة.</p>';
                 return;
             }
             if (prods.length === 0) {
@@ -2098,7 +2098,7 @@ async function deleteTrader(id) {
                     <h3 class="text-2xl font-semibold text-gray-800">تفاصيل الفاتورة #${s.SaleID}</h3>`;
          // Conditional Back Button
          if (fromTraderDetails && s.TraderID) {
-             html += `<button onclick="showTraderDetails(${s.TraderID})" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لتفاصيل التاجر</button>`;
+             html += `<button onclick="showTraderDetails(${s.TraderID})" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لتفاصيل العميل</button>`;
          } else {
              html += `<button id="backToSalesBtn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لقائمة الفواتير</button>`;
          }
@@ -2106,7 +2106,7 @@ async function deleteTrader(id) {
 
         // Sale Summary
         html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-b pb-4">
-                    <div><strong class="text-gray-600">التاجر:</strong> ${s.trader?.TraderName || 'غير محدد'}</div>
+                    <div><strong class="text-gray-600">العميل:</strong> ${s.trader?.TraderName || 'غير محدد'}</div>
                     <div><strong class="text-gray-600">تاريخ الفاتورة:</strong> ${formatDate(s.SaleDate)}</div>
                     <div><strong class="text-gray-600">الإجمالي:</strong> ${s.TotalAmount.toFixed(2)}</div>
                     <div><strong class="text-gray-600">المدفوع:</strong> ${s.PaidAmount.toFixed(2)}</div>
@@ -2151,7 +2151,7 @@ async function deleteTrader(id) {
     }
     // Delete sale
     async function deleteSale(id) {
-      Swal.fire({title: 'هل أنت متأكد؟',text: `هل أنت متأكد من حذف الفاتورة رقم ${id}؟ سيتم استرجاع كميات المنتجات للمخزن وتحديث رصيد التاجر.`,icon: 'warning',showCancelButton: true,confirmButtonColor: '#3085d6',cancelButtonColor: '#d33',confirmButtonText: 'نعم',cancelButtonText: 'لا'}).then((result) => {if (result.isConfirmed) {}});
+      Swal.fire({title: 'هل أنت متأكد؟',text: `هل أنت متأكد من حذف الفاتورة رقم ${id}؟ سيتم استرجاع كميات المنتجات للمخزن وتحديث رصيد العميل.`,icon: 'warning',showCancelButton: true,confirmButtonColor: '#3085d6',cancelButtonColor: '#d33',confirmButtonText: 'نعم',cancelButtonText: 'لا'}).then((result) => {if (result.isConfirmed) {}});
       try {
         const res = await fetch(`http://localhost:3001/api/sales/${id}`, { method: 'DELETE' });
         const data = await res.json(); // Get response body even on error
@@ -2176,7 +2176,7 @@ async function deleteTrader(id) {
             ]);
 
             if (!sRes.ok) throw new Error('لم يتم العثور على الفاتورة');
-            if (!trRes.ok || !prodRes.ok) throw new Error('فشل تحميل بيانات التجار أو المنتجات');
+            if (!trRes.ok || !prodRes.ok) throw new Error('فشل تحميل بيانات العملاء أو المنتجات');
 
             const s = await sRes.json();
             const traders = await trRes.json();
@@ -2188,9 +2188,9 @@ async function deleteTrader(id) {
                 <form id="editSaleForm" class="space-y-4">
                     <input type="hidden" id="editSaleId" value="${s.SaleID}">
                      <div>
-                        <label for="sTrader" class="block text-sm font-medium text-gray-700 mb-1">التاجر</label>
+                        <label for="sTrader" class="block text-sm font-medium text-gray-700 mb-1">العميل</label>
                         <select id="sTrader" name="sTrader" class="w-full" required>
-                            <option value="">-- اختر تاجر --</option>`;
+                            <option value="">-- اختر عميل --</option>`;
             traders.forEach(t => { html += `<option value="${t.TraderID}"${t.TraderID === s.TraderID ? ' selected' : ''}>${t.TraderName}</option>`; });
             html += `
                         </select>
@@ -2377,7 +2377,7 @@ async function deleteTrader(id) {
                 });
 
                  if (!TraderID || !SaleDate) {
-                    msgDiv.innerHTML = '<p class="text-red-600">يرجى اختيار تاجر وتحديد تاريخ الفاتورة.</p>';
+                    msgDiv.innerHTML = '<p class="text-red-600">يرجى اختيار عميل وتحديد تاريخ الفاتورة.</p>';
                     return;
                 }
                 if (updatedProducts.length === 0) {
