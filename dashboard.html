@@ -253,7 +253,27 @@
       document.getElementById('addSaleBtn')?.addEventListener('click', showAddSaleForm); // Add null check
       document.querySelectorAll('.view-sale').forEach(btn => btn.addEventListener('click', () => showSaleDetails(btn.dataset.id)));
       document.querySelectorAll('.edit-sale').forEach(btn => btn.addEventListener('click', () => showEditSaleForm(btn.dataset.id)));
-      document.querySelectorAll('.delete-sale').forEach(btn => btn.addEventListener('click', () => deleteSale(btn.dataset.id)));
+      document.querySelectorAll('.delete-sale').forEach(btn => btn.addEventListener('click', () => {
+  Swal.fire({
+    title: 'هل أنت متأكد؟',
+    text: `هل أنت متأكد من حذف الفاتورة رقم ${btn.dataset.id}؟ لا يمكن التراجع عن هذا الإجراء.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#22c55e',
+    cancelButtonColor: '#ef4444',
+    confirmButtonText: 'نعم، احذف!',
+    cancelButtonText: 'إلغاء',
+    buttonsStyling: true,
+    customClass: {
+      confirmButton: 'bg-green-500 hover:bg-green-600',
+      cancelButton: 'bg-red-500 hover:bg-red-600'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      deleteSale(btn.dataset.id);
+    }
+  });
+}));
 
       // Sales filter logic
       const filterSales = () => {
@@ -297,7 +317,27 @@
       html += '</tbody></table>';
       document.getElementById('content').innerHTML = html;
       document.querySelectorAll('.edit-product').forEach(btn => btn.addEventListener('click', () => showEditProductForm(btn.dataset.id)));
-      document.querySelectorAll('.delete-product').forEach(btn => btn.addEventListener('click', () => deleteProduct(btn.dataset.id)));
+      document.querySelectorAll('.delete-product').forEach(btn => btn.addEventListener('click', () => {
+  Swal.fire({
+    title: 'هل أنت متأكد؟',
+    text: `هل أنت متأكد من حذف المنتج رقم ${btn.dataset.id}؟ لا يمكن التراجع عن هذا الإجراء.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#22c55e',
+    cancelButtonColor: '#ef4444',
+    confirmButtonText: 'نعم، احذف!',
+    cancelButtonText: 'إلغاء',
+    buttonsStyling: true,
+    customClass: {
+      confirmButton: 'bg-green-500 hover:bg-green-600',
+      cancelButton: 'bg-red-500 hover:bg-red-600'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      deleteProduct(btn.dataset.id);
+    }
+  });
+}));
       document.getElementById('addProductBtn')?.addEventListener('click', showAddProductForm); // Add null check
       const productsSearchEl = document.getElementById('productsSearchInput');
       if (productsSearchEl) {
@@ -927,7 +967,27 @@ async function deleteExpense(expenseId) {
 
       // Add event listeners for edit/delete buttons
       document.querySelectorAll('.edit-expense').forEach(btn => btn.addEventListener('click', () => showEditExpenseForm(btn.dataset.id)));
-      document.querySelectorAll('.delete-expense').forEach(btn => btn.addEventListener('click', () => deleteExpense(btn.dataset.id)));
+      document.querySelectorAll('.delete-expense').forEach(btn => btn.addEventListener('click', () => {
+  Swal.fire({
+    title: 'هل أنت متأكد؟',
+    text: `هل أنت متأكد من حذف المصروف رقم ${btn.dataset.id}؟ لا يمكن التراجع عن هذا الإجراء.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#22c55e',
+    cancelButtonColor: '#ef4444',
+    confirmButtonText: 'نعم، احذف!',
+    cancelButtonText: 'إلغاء',
+    buttonsStyling: true,
+    customClass: {
+      confirmButton: 'bg-green-500 hover:bg-green-600',
+      cancelButton: 'bg-red-500 hover:bg-red-600'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      deleteExpense(btn.dataset.id);
+    }
+  });
+}));
 
       // Expenses filter logic
       const filterExpenses = () => {
