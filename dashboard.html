@@ -390,157 +390,229 @@
     }
 
 
-
     async function loadPurchases() {
-        const res = await fetch('http://localhost:3001/api/purchases');
-        console.log('Response:', res);
-        const data = await res.json();
-        console.log('Loading purchases data:', data);
-
-        let html = `
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl">المشتريات</h2>
-                <button id="addPurchaseBtn" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">+ إنشاء مشتريات</button>
-            </div>
-            <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <label class="block mb-2" for="purchasesFilterStart">من تاريخ</label>
-                <input type="date" id="purchasesFilterStart" class="border px-3 py-2 rounded" />
-                <label class="block mb-2" for="purchasesFilterEnd">إلى تاريخ</label>
-                <input type="date" id="purchasesFilterEnd" class="border px-3 py-2 rounded" />
-                <label class="block mb-2" for="purchasesFilterMin">الحد الأدنى للإجمالي</label>
-                <input type="number" id="purchasesFilterMin" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />
-                <label class="block mb-2" for="purchasesFilterMax">الحد الأقصى للإجمالي</label>
-                <input type="number" id="purchasesFilterMax" placeholder="0.00" step="0.01" class="border px-3 py-2 rounded" />
-            </div>
-            <table class="min-w-full bg-white border">
-                <thead>
-                    <tr>
-                        <th class="border px-2 py-1">ID</th>
-                        <th class="border px-2 py-1">التاريخ</th>
-                        <th class="border px-2 py-1">المورد</th>
-                        <th class="border px-2 py-1">الإجمالي</th>
-                        <th class="border px-2 py-1">الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="purchasesTableBody">
-                </tbody>
-            </table>
-        `;
-        document.getElementById('content').innerHTML = html;
-
-        const addBtn = document.getElementById('addPurchaseBtn');
-        if (addBtn) {
-            addBtn.addEventListener('click', async () => {
-                showAddPurchaseForm(); // Call the form directly
-            });
-        }
-
-        if (!res.ok) {
-            console.error('Error loading purchases:', data.error);
-            document.getElementById('purchasesTableBody').innerHTML =
-                `<tr><td colspan="5" class="text-center py-2 text-red-600">${data.error || 'خطأ في تحميل المشتريات'}</td></tr>`;
-            return;
-        }
-
-        if (!data || data.length === 0) {
-            document.getElementById('purchasesTableBody').innerHTML =
-                '<tr><td colspan="5" class="text-center py-2">لا توجد مشتريات</td></tr>';
-            return;
-        }
-
-        // Group purchases by PurchaseID to display one row per purchase summary
-        const groupedPurchases = {};
-        data.forEach(p => {
-            console.log(p);
-            if (!groupedPurchases[p.PurchaseID]) {
-                groupedPurchases[p.PurchaseID] = {
-                    PurchaseID: p.PurchaseID,
-                    PurchaseDate: p.PurchaseDate,
-                    SupplierName: p.SupplierDisplayName || p.SupplierName, // Fallback to original SupplierName if SupplierDisplayName is null
-                    TotalAmount: 0, // Calculate total amount from details
-                    details: []
-                };
+        try {
+            // Fetch flattened purchase data from the backend
+            const res = await fetch('http://localhost:3001/api/purchases');
+            if (!res.ok) {
+                const error = await res.text(); // Get error as text
+                throw new Error(`HTTP error! status: ${res.status}, message: ${error}`);
             }
-            // Add detail and sum up total amount
-            groupedPurchases[p.PurchaseID].details.push(p);
-            if (p.detail_quantity != null && p.detail_unit_cost != null) {
-                groupedPurchases[p.PurchaseID].TotalAmount += p.detail_quantity * p.detail_unit_cost;
-            } else if (p.TotalAmount != null) {
-                groupedPurchases[p.PurchaseID].TotalAmount += p.TotalAmount;
-            }
-        });
+            const data = await res.json();
 
-
-        const tbody = document.getElementById('purchasesTableBody');
-        tbody.innerHTML = ''; // Clear previous content
-
-        Object.values(groupedPurchases).forEach(p => {
-            console.log(p);
-            const row = document.createElement('tr');
-            row.dataset.purchaseDate = formatDateForInput(p.PurchaseDate);
-            row.dataset.purchaseTotal = p.TotalAmount.toFixed(2);
-            row.className = 'table-row';
-            row.innerHTML = `
-                <td class="border px-2 py-1">${p.PurchaseID}</td>
-                <td class="border px-2 py-1">${formatDate(p.PurchaseDate)}</td>
-                <td class="border px-2 py-1">${p.SupplierName || ' لا تتوفر بيانات '}</td>
-                <td class="border px-2 py-1">${p.TotalAmount.toFixed(2)}</td>
-                <td class="border px-2 py-1">
-                <button data-id="${p.PurchaseID}" class="view-purchase text-blue-600 hover:underline mr-2">عرض</button>
-                <button data-id="${p.PurchaseID}" class="edit-purchase text-yellow-600 hover:underline mr-2">تعديل</button>
-                <button data-id="${p.PurchaseID}" class="delete-purchase text-red-600 hover:underline mr-2">حذف</button>
-                </td>
+            // --- Build HTML for the list view ---
+            let html = `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold">المشتريات</h2>
+                    <button id="addPurchaseBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">+ إنشاء سجل مشتريات</button>
+                </div>
+                <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label for="purchasesFilterStart" class="block text-sm font-medium text-gray-700 mb-1">من تاريخ</label>
+                        <input type="date" id="purchasesFilterStart" class="w-full border px-3 py-2 rounded" />
+                    </div>
+                    <div>
+                         <label for="purchasesFilterEnd" class="block text-sm font-medium text-gray-700 mb-1">إلى تاريخ</label>
+                        <input type="date" id="purchasesFilterEnd" class="w-full border px-3 py-2 rounded" />
+                    </div>
+                    <div>
+                         <label for="purchasesFilterMin" class="block text-sm font-medium text-gray-700 mb-1">الحد الأدنى للإجمالي</label>
+                         <input type="number" id="purchasesFilterMin" placeholder="0.00" step="0.01" class="w-full border px-3 py-2 rounded" />
+                    </div>
+                    <div>
+                         <label for="purchasesFilterMax" class="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى للإجمالي</label>
+                        <input type="number" id="purchasesFilterMax" placeholder="0.00" step="0.01" class="w-full border px-3 py-2 rounded" />
+                    </div>
+                </div>
+                 <div class="mb-4">
+                     <input type="text" id="purchasesSearchInput" placeholder="بحث (المورد، المنتجات...)" class="border px-3 py-2 rounded w-full">
+                 </div>
+                <table class="min-w-full bg-white border">
+                    <thead>
+                        <tr>
+                            <th class="border px-2 py-1">ID</th>
+                            <th class="border px-2 py-1">التاريخ</th>
+                            <th class="border px-2 py-1">المورد</th>
+                             <th class="border px-2 py-1">المنتجات (الكمية × التكلفة)</th>
+                            <th class="border px-2 py-1">الإجمالي</th>
+                            <th class="border px-2 py-1">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchasesTableBody">
+                    </tbody>
+                </table>
             `;
-            tbody.appendChild(row);
-        });
+            document.getElementById('content').innerHTML = html;
 
-        // Add event listeners for view buttons
-         document.querySelectorAll('.view-purchase').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.dataset.id;
-                showPurchaseDetails(id);
-            });
-        });
+            // Add event listener for add button
+            document.getElementById('addPurchaseBtn')?.addEventListener('click', showAddPurchaseForm);
 
-        // Add event listeners for edit buttons
-        document.querySelectorAll('.edit-purchase').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.dataset.id;
-                showEditPurchaseForm(id);
-            });
-        });
+            // --- Process and display data ---
+            const tbody = document.getElementById('purchasesTableBody');
+            tbody.innerHTML = ''; // Clear previous content
 
-        // Add event listeners for delete buttons
-        document.querySelectorAll('.delete-purchase').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.dataset.id;
-                deletePurchase(id);
-            });
-        });
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">لا توجد مشتريات مسجلة.</td></tr>';
+                return;
+            }
 
-        // Purchases filter logic
-        const filterPurchases = () => {
-            const start = document.getElementById('purchasesFilterStart').value;
-            const end = document.getElementById('purchasesFilterEnd').value;
-            const min = parseFloat(document.getElementById('purchasesFilterMin').value);
-            const max = parseFloat(document.getElementById('purchasesFilterMax').value);
-            document.querySelectorAll('#content table tbody tr').forEach(row => {
-                const date = row.dataset.purchaseDate;
-                const total = parseFloat(row.dataset.purchaseTotal);
-                let show = true;
-                if (start && date < start) show = false;
-                if (end && date > end) show = false;
-                if (!isNaN(min) && total < min) show = false;
-                if (!isNaN(max) && total > max) show = false;
-                row.style.display = show ? '' : 'none';
+            // Group purchases by PurchaseID for display in the list
+            const groupedPurchases = {};
+            data.forEach(item => {
+                 const purchaseId = item.PurchaseID;
+                 if (!groupedPurchases[purchaseId]) {
+                     groupedPurchases[purchaseId] = {
+                         PurchaseID: purchaseId,
+                         PurchaseDate: item.PurchaseDate,
+                         SupplierName: item.SupplierDisplayName || item.SupplierName || '', // Fallback to original SupplierName if SupplierDisplayName is null
+                         TotalAmount: 0, // Will sum from details or use main total
+                         Notes: item.Notes || '',
+                         productsSummary: [],
+                         // Store original TotalAmount from the header for filtering/sorting purposes
+                         headerTotalAmount: item.TotalAmount
+                     };
+                 }
+
+                 // Add product detail summary if detail exists (ProductID or detail_quantity implies it's a detail row)
+                 if (item.ProductID || item.detail_quantity != null) {
+                     const productName = item.ProductName || 'منتج غير معروف';
+                     const quantity = item.detail_quantity || item.Quantity || 0; // Use detail qty if available
+                     const unitCost = item.detail_unit_cost || item.UnitCost || 0; // Use detail cost if available
+                     const subTotal = quantity * unitCost;
+
+                      // If the main purchase has ProductID, use its direct data (older simple purchase structure)
+                     if (item.ProductID && !item.detail_quantity && item.PurchaseID === item.ProductID) { // Check if it looks like the old simple purchase structure
+                         groupedPurchases[purchaseId].productsSummary.push(
+                              `${productName} (${item.Quantity || 0} × ${item.UnitCost ? item.UnitCost.toFixed(2) : 'N/A'})` // Use main item data
+                         );
+                         groupedPurchases[purchaseId].TotalAmount = item.TotalAmount || 0; // Use main item total
+                     } else if (item.detail_quantity != null || item.ProductID != null) {
+                          // Use detail data for multi-item purchases or newer single-item purchase_details structure
+                           groupedPurchases[purchaseId].productsSummary.push(
+                              `${productName} (${quantity || 0} × ${unitCost.toFixed(2)})`
+                          );
+                          // Only sum from details if this purchase has details (check if any detail was added)
+                          // A more robust way might be to check if the groupedPurchase object already has details pushed
+                          groupedPurchases[purchaseId].TotalAmount += subTotal; // Sum subtotal from details
+                     }
+                 } else {
+                     // This case might happen if a purchase header exists but has no details yet,
+                     // or if the join didn't find matches. Display header total if available.
+                     if (item.TotalAmount != null) {
+                          groupedPurchases[purchaseId].TotalAmount = item.TotalAmount;
+                     }
+                 }
             });
-        };
-        ['input','change'].forEach(evt => {
-            ['purchasesFilterStart','purchasesFilterEnd','purchasesFilterMin','purchasesFilterMax'].forEach(id => {
-                document.getElementById(id).addEventListener(evt, filterPurchases);
+
+             // Recalculate TotalAmount for purchases that were just headers or had missing details
+             // Ensure the final TotalAmount displayed is either the sum of details or the header total if no details were found
+             Object.keys(groupedPurchases).forEach(pId => {
+                 // If productsSummary was populated, TotalAmount is already summed from details.
+                 // If productsSummary is empty, use the headerTotalAmount if available.
+                 if (groupedPurchases[pId].productsSummary.length === 0 && groupedPurchases[pId].headerTotalAmount != null) {
+                     groupedPurchases[pId].TotalAmount = groupedPurchases[pId].headerTotalAmount;
+                 } else if (groupedPurchases[pId].productsSummary.length > 0) {
+                     // Recalculate total just in case the initial sum missed some details due to join structure
+                     let currentTotal = 0;
+                      data.filter(item => item.PurchaseID === groupedPurchases[pId].PurchaseID && (item.detail_quantity != null || item.ProductID != null)) // Filter original flat data for this purchase with details
+                          .forEach(item => {
+                               const quantity = item.detail_quantity || item.Quantity || 0;
+                               const unitCost = item.detail_unit_cost || item.UnitCost || 0;
+                               currentTotal += quantity * unitCost;
+                          });
+                      groupedPurchases[pId].TotalAmount = currentTotal;
+                 } else {
+                     // No details and no header total? Default to 0.
+                     groupedPurchases[pId].TotalAmount = 0;
+                 }
+             });
+
+
+            // Sort purchases by date descending
+             const sortedPurchases = Object.values(groupedPurchases).sort((a, b) => new Date(b.PurchaseDate) - new Date(a.PurchaseDate));
+
+
+            // Populate table rows from grouped data
+            sortedPurchases.forEach(p => {
+                const row = document.createElement('tr');
+                row.className = 'table-row';
+                 // Use headerTotalAmount for data-total attribute if available, fallback to calculated total
+                const filterTotal = p.headerTotalAmount != null ? p.headerTotalAmount : p.TotalAmount;
+
+                row.dataset.purchaseDate = formatDateForInput(p.PurchaseDate);
+                row.dataset.purchaseTotal = filterTotal.toFixed(2);
+
+
+                row.innerHTML = `
+                    <td class="border px-2 py-1">${p.PurchaseID}</td>
+                    <td class="border px-2 py-1">${formatDate(p.PurchaseDate)}</td>
+                    <td class="border px-2 py-1">${p.SupplierName}</td>
+                     <td class="border px-2 py-1 text-sm">${p.productsSummary.join(', ') || 'لا توجد منتجات'}</td>
+                    <td class="border px-2 py-1">${p.TotalAmount.toFixed(2)}</td>
+                    <td class="border px-2 py-1 space-x-2">
+                        <button data-id="${p.PurchaseID}" class="view-purchase text-blue-600 hover:underline">عرض</button>
+                        <button data-id="${p.PurchaseID}" class="edit-purchase text-yellow-600 hover:underline">تعديل</button>
+                        <button data-id="${p.PurchaseID}" class="delete-purchase text-red-600 hover:underline">حذف</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
             });
-        });
+
+            // Add event listeners for view, edit, and delete buttons
+             document.querySelectorAll('.view-purchase').forEach(btn => {
+                 btn.addEventListener('click', () => showPurchaseDetails(btn.dataset.id));
+             });
+             document.querySelectorAll('.edit-purchase').forEach(btn => {
+                 btn.addEventListener('click', () => showEditPurchaseForm(btn.dataset.id));
+             });
+             document.querySelectorAll('.delete-purchase').forEach(btn => {
+                 btn.addEventListener('click', async () => { // Make delete async
+                     const id = btn.dataset.id;
+                     deletePurchase(id); // Call the delete function
+                 });
+             });
+
+
+            // Purchases filter logic (using data attributes)
+            const filterPurchases = () => {
+                const start = document.getElementById('purchasesFilterStart').value;
+                const end = document.getElementById('purchasesFilterEnd').value;
+                const min = parseFloat(document.getElementById('purchasesFilterMin').value);
+                const max = parseFloat(document.getElementById('purchasesFilterMax').value);
+                const text = document.getElementById('purchasesSearchInput').value.trim().toLowerCase();
+
+                document.querySelectorAll('#purchasesTableBody tr').forEach(row => {
+                    const date = row.dataset.purchaseDate;
+                    const total = parseFloat(row.dataset.purchaseTotal);
+                    const rowText = row.textContent.toLowerCase();
+
+                    let show = true;
+                    if (start && date < start) show = false;
+                    if (end && date > end) show = false;
+                    if (!isNaN(min) && total < min) show = false;
+                    if (!isNaN(max) && total > max) show = false;
+                    if (text && !rowText.includes(text)) show = false;
+
+                    row.style.display = show ? '' : 'none';
+                });
+            };
+            // Add event listeners to filter inputs/changes
+            ['input','change'].forEach(evt => {
+                ['purchasesFilterStart','purchasesFilterEnd','purchasesFilterMin','purchasesFilterMax','purchasesSearchInput'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.addEventListener(evt, filterPurchases);
+                });
+            });
+
+
+        } catch (error) {
+            console.error('Error loading purchases:', error);
+            document.getElementById('content').innerHTML =
+                `<p class="text-red-600 p-4">حدث خطأ أثناء تحميل المشتريات: ${error.message}</p>`;
+        }
     }
+
+    
 
 
     async function loadExpenses() {
@@ -1097,18 +1169,12 @@ async function deleteExpense(expenseId) {
                         <label for="eCategory" class="block text-sm font-medium text-gray-700 mb-1">الصنف</label>
                         <input type="text" id="eCategory" name="eCategory" value="${p.Category}" class="mt-1 block w-full" required />
                     </div>
-                    <div>
-                        <label for="eStock" class="block text-sm font-medium text-gray-700 mb-1">الكمية الحالية بالمخزن</label>
-                        <input type="number" id="eStock" name="eStock" min="0" value="${p.StockQuantity}" class="mt-1 block w-full" required />
-                    </div>
+                  
                     <div>
                         <label for="ePrice" class="block text-sm font-medium text-gray-700 mb-1">سعر بيع الوحدة</label>
                         <input type="number" step="0.01" min="0" id="ePrice" name="ePrice" value="${p.UnitPrice}" class="mt-1 block w-full" required />
                     </div>
-                    <div>
-                        <label for="eCost" class="block text-sm font-medium text-gray-700 mb-1">تكلفة شراء الوحدة (متوسط)</label>
-                        <input type="number" step="0.01" min="0" id="eCost" name="eCost" value="${p.UnitCost || ''}" placeholder="اتركه فارغاً إذا لم يتغير" class="mt-1 block w-full" />
-                    </div>
+                   
                     <div class="flex justify-end space-x-2 space-x-reverse pt-4">
                        <button type="button" id="cancelEditProduct" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
@@ -2502,394 +2568,470 @@ async function deleteExpense(expenseId) {
         }
     }
     // Function to show edit purchase form
+    
     async function showEditPurchaseForm(purchaseId) {
         try {
             // Fetch purchase details and all active products
             const [purchaseRes, productsRes] = await Promise.all([
-                 fetch(`http://localhost:3001/api/purchases/${purchaseId}`),
-                 fetch('http://localhost:3001/api/products?active=true')
+                fetch(`http://localhost:3001/api/purchases/${purchaseId}`), // Fetch structured purchase data
+                fetch('http://localhost:3001/api/products?active=true') // Fetch active products for dropdown
             ]);
 
+            if (!purchaseRes.ok) {
+                const errData = await purchaseRes.json();
+                 throw new Error(errData.error || `Purchase record with ID ${purchaseId} not found`);
+             }
+            if (!productsRes.ok) throw new Error('فشل تحميل بيانات المنتجات.');
 
-            if (!purchaseRes.ok) throw new Error('لم يتم العثور على سجل المشتريات.');
-            if (!productsRes.ok) throw new Error('فشل تحميل قائمة المنتجات.');
-
-            const purchaseDetails = await purchaseRes.json(); // This should return an array of details for the same purchaseId
-             if (!purchaseDetails || purchaseDetails.length === 0) {
-                 throw new Error('لا توجد تفاصيل لهذا السجل.');
-            }
+            const purchaseData = await purchaseRes.json(); // Expected: { ..., products: [...] }
             const products = await productsRes.json();
 
-            // Extract common info from the first detail record
-            const commonInfo = purchaseDetails[0];
-
+            // Structure the HTML form for editing
             let html = `
-            <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
-                <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل سجل المشتريات #${purchaseId}</h3>
-                <div id="purchaseMsg" class="mb-4"></div>
-                <form id="editPurchaseForm" class="space-y-4">
-                    <input type="hidden" id="editPurchaseId" value="${purchaseId}">
-                    <div>
-                        <label for="supplierName" class="block text-sm font-medium text-gray-700 mb-1">اسم المورد</label>
-                        <input id="supplierName" name="supplierName" type="text" value="${commonInfo.SupplierName || ''}" placeholder="اسم المورد أو المحل" class="w-full" />
-                    </div>
-                    <div>
-                        <label for="purchaseDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الشراء</label>
-                        <input type="date" id="purchaseDate" name="purchaseDate" value="${formatDateForInput(commonInfo.PurchaseDate)}" class="w-full" required />
-                    </div>
-                    <div>
-                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
-                        <textarea id="notes" name="notes" rows="2" class="w-full" placeholder="رقم فاتورة المورد، تفاصيل إضافية...">${commonInfo.Notes || ''}</textarea>
-                    </div>
-
-                     <fieldset class="border p-4 rounded mt-4">
-                        <legend class="text-lg font-medium text-gray-700 px-2">المنتجات المشتراة</legend>
-                        <div id="purchaseRows" class="space-y-3 mt-2">
-                            <!-- Existing rows will be populated here -->
+                <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold mb-6 text-gray-700">تعديل سجل المشتريات #${purchaseId}</h3>
+                    <div id="purchaseMsg" class="mb-4"></div>
+                    <form id="editPurchaseForm" class="space-y-4">
+                        <input type="hidden" id="editPurchaseId" value="${purchaseId}">
+                        <div>
+                            <label for="supplierName" class="block text-sm font-medium text-gray-700 mb-1">اسم المورد (اختياري)</label>
+                            <input id="supplierName" name="supplierName" type="text" value="${purchaseData.SupplierName || ''}" placeholder="اسم المورد أو المحل" class="w-full border px-3 py-2 rounded" />
                         </div>
-                        <button id="addPurchaseRowBtn" type="button" class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">+ إضافة منتج</button>
-                    </fieldset>
+                        <div>
+                            <label for="purchaseDate" class="block text-sm font-medium text-gray-700 mb-1">تاريخ الشراء</label>
+                            <input type="date" id="purchaseDate" name="purchaseDate" value="${formatDateForInput(purchaseData.PurchaseDate)}" class="w-full border px-3 py-2 rounded" required />
+                        </div>
+                        <div>
+                            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                            <textarea id="notes" name="notes" rows="2" class="w-full border px-3 py-2 rounded" placeholder="رقم فاتورة المورد، تفاصيل إضافية...">${purchaseData.Notes || ''}</textarea>
+                        </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">إجمالي تكلفة الشراء</label>
-                        <div id="purchaseTotalDisplay" class="mt-1 block w-full p-2 bg-gray-100 rounded border border-gray-300 text-center font-bold">0.00</div>
-                    </div>
+                        <fieldset class="border rounded-lg p-4">
+                            <legend class="text-base font-medium text-gray-700 px-2">المنتجات</legend>
+                             <div class="grid grid-cols-10 gap-2 mb-2 font-semibold text-gray-700">
+                                 <div class="col-span-4">المنتج</div>
+                                 <div class="col-span-2 text-center">الكمية</div>
+                                 <div class="col-span-2 text-center">تكلفة الوحدة</div>
+                                 <div class="col-span-2"></div> <!-- for delete button -->
+                             </div>
+                            <div id="purchaseRows" class="space-y-3 mt-2">
+                                <!-- Existing and new product rows will be added here -->
+                            </div>
+                            <button id="addPurchaseRowBtn" type="button" class="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium px-2 py-1 border rounded border-blue-600 hover:border-blue-800">+ إضافة منتج</button>
+                        </fieldset>
 
-                     <div class="flex justify-end space-x-2 space-x-reverse pt-6">
-                        <button type="button" id="cancelEditPurchase" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
-                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
-                    </div>
-                </form>
-            </div>`;
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">إجمالي تكلفة الشراء</label>
+                            <div id="purchaseTotalDisplay" class="mt-1 block w-full p-2 bg-gray-100 rounded border border-gray-300 text-center font-bold">0.00</div>
+                        </div>
+
+                         <div class="flex justify-end space-x-2 space-x-reverse pt-6">
+                            <button type="button" id="cancelEditPurchase" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">إلغاء</button>
+                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">حفظ التعديلات</button>
+                        </div>
+                    </form>
+                </div>`;
+
             document.getElementById('content').innerHTML = html;
 
-            let purchaseRowCount = 0;
             const purchaseRowsContainer = document.getElementById('purchaseRows');
             const purchaseTotalDisplay = document.getElementById('purchaseTotalDisplay');
+            let purchaseRowCount = 0; // Use a counter for unique element IDs
 
-            // Re-use addPurchaseRow function from the Add form
-             const addPurchaseRow = (detail = null) => {
-                 // (Identical logic to addPurchaseRow in showAddPurchaseForm)
-                 const rowId = purchaseRowCount++;
-                 const div = document.createElement('div');
-                 div.className = 'grid grid-cols-1 md:grid-cols-10 gap-2 items-center border-b border-gray-200 pb-2 purchase-product-row';
-                 div.dataset.rowId = rowId;
-                 div.dataset.detailId = detail ? detail.PurchaseDetailID : '';
+            // Re-use addPurchaseRow function - it handles pre-filling if 'detail' is provided
+            const addPurchaseRow = (detail = null) => {
+                const rowId = purchaseRowCount++; // Get a unique ID for this row
+                const div = document.createElement('div');
+                div.className = 'grid grid-cols-10 gap-2 items-center purchase-product-row'; // Use class name for easier selection
+                div.dataset.rowId = rowId; // Store row ID if needed later
+                 // In edit form, store original detail ID here for potential future use (backend currently replaces all)
+                 // div.dataset.detailId = detail ? detail.PurchaseDetailID || '' : '';
 
+
+                // Product Select
                 const sel = document.createElement('select');
-                sel.className = 'md:col-span-4';
-                sel.id = `pProduct${rowId}`;
-                sel.name = `pProduct${rowId}`;
+                sel.className = 'product-select col-span-4 border px-3 py-2 rounded'; // Use class and grid span
+                sel.id = `pProductSelect_${rowId}`; // Unique ID
                 sel.required = true;
                 sel.innerHTML = '<option value="">-- اختر منتج --</option>';
                 products.forEach(p => {
-                     const isSelected = detail && p.ProductID === detail.ProductID;
-                    sel.innerHTML += `<option value="${p.ProductID}" data-cost="${p.UnitCost || 0}" data-stock="${p.StockQuantity}"${isSelected ? ' selected' : ''}>${p.ProductName} (التكلفة الحالية: ${p.UnitCost?.toFixed(2) || 'N/A'})</option>`;
-                });
-                sel.addEventListener('change', (e) => {
-                    const costInput = document.getElementById(`pCost${rowId}`);
-                    const selectedOption = e.target.options[e.target.selectedIndex];
-                    const currentCost = selectedOption.dataset.cost;
-                    if (e.target.value && e.target.value !== 'new' && costInput) {
-                        costInput.value = parseFloat(currentCost).toFixed(2) || '';
-                    }
-                    updatePurchaseTotal();
+                     // Check if this product is the one from the detail object (if editing)
+                    const isSelected = detail && (p.ProductID === detail.ProductID || p.ProductID === detail.product_id);
+                    sel.innerHTML += `<option value="${p.ProductID}" data-cost="${p.UnitCost || 0}" data-price="${p.UnitPrice || 0}" ${isSelected ? 'selected' : ''}>${p.ProductName}</option>`;
                 });
 
+                // Quantity Input
                 const q = document.createElement('input');
-                q.id = `pQuantity${rowId}`;
-                q.name = `pQuantity${rowId}`;
                 q.type = 'number';
-                q.min = 1;
+                q.className = 'quantity-input col-span-2 border px-3 py-2 rounded text-center'; // Use class and grid span
+                q.id = `pQuantityInput_${rowId}`; // Unique ID
+                q.min = '1'; // Quantity must be at least 1
+                q.step = '1';
                 q.placeholder = 'الكمية';
-                q.className = 'md:col-span-2';
                 q.required = true;
-                q.value = detail ? detail.Quantity : '';
-                q.addEventListener('input', updatePurchaseTotal);
+                 // Pre-fill if detail object is provided (editing)
+                q.value = detail ? (detail.Quantity || detail.quantity || detail.detail_quantity || '') : '';
 
-
+                // Unit Cost Input
                 const c = document.createElement('input');
-                c.id = `pCost${rowId}`;
-                c.name = `pCost${rowId}`;
                 c.type = 'number';
+                c.className = 'unit-cost-input col-span-2 border px-3 py-2 rounded text-center'; // Use class and grid span
+                c.id = `pCostInput_${rowId}`; // Unique ID
+                c.min = '0'; // Cost can be 0
                 c.step = '0.01';
-                c.min = 0;
                 c.placeholder = 'تكلفة الوحدة';
-                c.className = 'md:col-span-2';
                 c.required = true;
-                 c.value = detail ? detail.UnitCost.toFixed(2) : ''; // Pre-fill if editing
-                c.addEventListener('input', updatePurchaseTotal);
+                 // Pre-fill if detail object is provided (editing)
+                 // Fallback to product's current cost if detail doesn't have cost?
+                 // For ADD form, we only need cost when selected changed. For EDIT, use detail.UnitCost.
+                c.value = detail ? (detail.UnitCost || detail.unit_cost || detail.detail_unit_cost || '').toFixed(2) : '';
 
 
+                // Remove Button
                 const rm = document.createElement('button');
                 rm.type = 'button';
-                rm.textContent = '×';
-                rm.className = 'md:col-span-1 text-red-500 hover:text-red-700 font-bold px-2 justify-self-center';
+                rm.className = 'remove-product-row col-span-2 text-red-600 hover:text-red-800 p-2'; // Use class and grid span, add padding
+                rm.textContent = 'حذف';
                 rm.addEventListener('click', () => {
-                    div.remove();
-                    updatePurchaseTotal();
+                    div.remove(); // Remove the row div
+                    updatePurchaseTotal(); // Update total after removing a row
                 });
 
+                 // Add event listeners for inputs to trigger total update
+                [sel, q, c].forEach(el => {
+                    // Using 'input' event for immediate feedback while typing numbers
+                    el.addEventListener('input', updatePurchaseTotal);
+                     // Using 'change' event for select dropdown or when input focus is lost
+                    el.addEventListener('change', updatePurchaseTotal);
+                });
+
+                // Initial population logic for Unit Cost on select change (needed if product is pre-selected or changed)
+                sel.addEventListener('change', () => {
+                    const selectedOption = sel.options[sel.selectedIndex];
+                    const costInput = div.querySelector('.unit-cost-input');
+                     // For new rows, populate with product's current cost when selected.
+                     // For edit rows, only update cost if the user changes the selected product.
+                    if (selectedOption.value) { // If a product is selected
+                       // Check if this is a new row (no detail provided) OR if the product selection changed from the original detail
+                       const originalProductSelected = detail && detail.ProductID === parseInt(selectedOption.value);
+                       if (!detail || !originalProductSelected) { // If adding OR if editing but product changed
+                            costInput.value = parseFloat(selectedOption.dataset.cost || '0').toFixed(2);
+                       } else if (detail && originalProductSelected) {
+                            // If editing and the original product is still selected,
+                            // make sure the cost input reflects the ORIGINAL DETAIL cost that was pre-filled.
+                            // This prevents the cost from snapping to the *current* average product cost if the user
+                            // selects the same product again during edit.
+                            // The initial value is already set from `detail.UnitCost`. Do nothing here to keep it.
+                       }
+
+
+                    } else { // If "-- اختر منتج --" is selected
+                        costInput.value = ''; // Clear cost if no product selected
+                    }
+                    updatePurchaseTotal(); // Always update total after select change
+                });
+
+
+                // Append elements to the row div
                 div.append(sel, q, c, rm);
                 purchaseRowsContainer.append(div);
-                 // Auto-fill cost for existing detail on load
+
+                 // --- Important for Edit form initial load ---
+                 // If loading an existing detail, ensure the select change listener runs ONCE
+                 // after the row is added and populated, so the cost input reflects the detail cost
+                 // and the total is calculated correctly based on initial values.
+                 // Triggering 'change' event on the select handles the potential cost auto-fill logic.
+                 // Triggering 'input' on quantity/cost ensures the total is calculated.
                  if (detail) {
-                    const selectedOption = sel.options[sel.selectedIndex];
-                    if (selectedOption && selectedOption.value === String(detail.ProductID)) {
-                        // c.value = detail.UnitCost.toFixed(2); // Already set above
-                    }
+                     // Use setTimeout with 0 delay to allow the element to be appended and rendered first
+                     setTimeout(() => {
+                         // We need to ensure the initial 'detail.UnitCost' is used, not the product's current cost.
+                         // So, *do not* fire the 'change' event on the select here, as that might overwrite detail.UnitCost.
+                         // Just fire 'input' on quantity and cost to calculate the initial total.
+                         q.dispatchEvent(new Event('input')); // Trigger input for total calculation
+                         c.dispatchEvent(new Event('input')); // Trigger input for total calculation
+                     }, 0);
                  }
+
+
+                return div; // Return the created div
             };
 
-             // Re-use updatePurchaseTotal function
-             const updatePurchaseTotal = () => {
-                 // (Identical logic to updatePurchaseTotal in showAddPurchaseForm)
-                 let total = 0;
-                 document.querySelectorAll('.purchase-product-row').forEach(row => {
-                    const rowId = row.dataset.rowId;
-                    const quantityInput = document.getElementById(`pQuantity${rowId}`);
-                    const costInput = document.getElementById(`pCost${rowId}`);
-                    const productSelect = document.getElementById(`pProduct${rowId}`);
 
-                     if (productSelect && productSelect.value && quantityInput && quantityInput.value && costInput && costInput.value) {
+            // Function to update the total purchase amount display (reused for Add and Edit)
+            const updatePurchaseTotal = () => {
+                let total = 0;
+                // Find all product rows using the class name
+                document.querySelectorAll('.purchase-product-row').forEach(row => {
+                    // Find inputs within this row using their class names
+                    const quantityInput = row.querySelector('.quantity-input');
+                    const costInput = row.querySelector('.unit-cost-input');
+                    const productSelect = row.querySelector('.product-select'); // Added select to check if a product is chosen
+
+                    // Check if a product is selected AND quantity/cost inputs have values
+                    if (productSelect?.value && quantityInput?.value && costInput?.value) {
                         const quantity = parseInt(quantityInput.value);
                         const cost = parseFloat(costInput.value);
-                         if (!isNaN(quantity) && quantity > 0 && !isNaN(cost) && cost >= 0) {
+                        // Add to total only if quantity is positive and cost is non-negative
+                        if (!isNaN(quantity) && quantity > 0 && !isNaN(cost) && cost >= 0) {
                             total += quantity * cost;
                         }
                     }
                 });
-                purchaseTotalDisplay.textContent = total.toFixed(2);
+                // Update the display element
+                if (purchaseTotalDisplay) {
+                     purchaseTotalDisplay.textContent = total.toFixed(2);
+                }
             };
 
-            // Populate existing rows from purchaseDetails array
-            purchaseDetails.forEach(detail => addPurchaseRow(detail));
-            updatePurchaseTotal(); // Calculate initial total
 
-            // Event listeners
+            // Populate existing rows from fetched purchase data
+            if (purchaseData.products && purchaseData.products.length > 0) {
+                purchaseData.products.forEach(detail => addPurchaseRow(detail));
+            } else {
+                addPurchaseRow(); // Add at least one empty row if the purchase had no details
+            }
+            // Ensure total is calculated after initial rows are added/populated
+             // Use a small delay to ensure elements are fully rendered and values set.
+             setTimeout(updatePurchaseTotal, 50);
+
+
+            // Add event listeners
             document.getElementById('addPurchaseRowBtn')?.addEventListener('click', () => addPurchaseRow()); // Add new empty row
-            document.getElementById('cancelEditPurchase')?.addEventListener('click', loadPurchases);
+            document.getElementById('cancelEditPurchase')?.addEventListener('click', loadPurchases); // Go back
 
-            // Edit form submission handler
-            document.getElementById('editPurchaseForm')?.addEventListener('submit', async e => {
+            // Form submission handler for EDIT
+            document.getElementById('editPurchaseForm')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                 const msgDiv = document.getElementById('purchaseMsg');
-                 msgDiv.innerHTML = '';
+                const msgDiv = document.getElementById('purchaseMsg');
+                msgDiv.innerHTML = ''; // Clear previous messages
 
-                 const editedPurchaseId = document.getElementById('editPurchaseId').value;
-                 const supplier_name = document.getElementById('supplierName').value.trim();
-                 const purchase_date = document.getElementById('purchaseDate').value;
-                 const notes = document.getElementById('notes').value.trim();
-                 const updatedRows = [];
-                 let formIsValid = true;
+                const purchaseId = document.getElementById('editPurchaseId').value;
+                const supplier_name = document.getElementById('supplierName').value.trim();
+                const purchase_date = document.getElementById('purchaseDate').value;
+                const notes = document.getElementById('notes').value.trim();
+                const updatedProducts = []; // Array to hold updated product data
+                let formIsValid = true; // Flag to track form validity
 
-                 document.querySelectorAll('.purchase-product-row').forEach(row => {
-                    const rowId = row.dataset.rowId;
-                    const detailId = row.dataset.detailId || null; // Get original detail ID
-                    const ps = document.getElementById(`pProduct${rowId}`);
-                    const qs = document.getElementById(`pQuantity${rowId}`);
-                    const cs = document.getElementById(`pCost${rowId}`);
 
-                     if (ps && ps.value && qs && qs.value && cs && cs.value) {
-                         const quantity = +qs.value;
-                         const cost = +cs.value;
-                        if (quantity <= 0 || cost < 0) {
-                             formIsValid = false;
-                             qs.classList.toggle('border-red-500', quantity <= 0);
-                             cs.classList.toggle('border-red-500', cost < 0);
-                        } else {
-                            qs.classList.remove('border-red-500');
-                            cs.classList.remove('border-red-500');
-                            updatedRows.push({
-                                purchase_detail_id: detailId, // Send original ID for matching/update
-                                product_id: +ps.value,
-                                quantity: quantity,
-                                unit_cost: cost
-                            });
-                        }
-                     } else if (ps || qs || cs) {
-                         formIsValid = false;
-                         ps?.classList.toggle('border-red-500', !ps?.value);
-                         qs?.classList.toggle('border-red-500', !qs?.value);
-                         cs?.classList.toggle('border-red-500', !cs?.value);
-                     }
-                });
-
-                if (!purchase_date) {
+                // Select all product rows using the class name
+                 const productRows = document.querySelectorAll('.purchase-product-row');
+                 if (productRows.length === 0) {
                      formIsValid = false;
-                     document.getElementById('purchaseDate').classList.add('border-red-500');
-                     msgDiv.innerHTML += '<p class="text-red-600">تاريخ الشراء مطلوب.</p>';
-                } else {
-                     document.getElementById('purchaseDate').classList.remove('border-red-500');
-                }
+                     msgDiv.innerHTML = '<p class="text-red-600">يجب إضافة منتج واحد على الأقل لسجل المشتريات.</p>';
+                 } else {
+                     productRows.forEach(row => {
+                        // Select inputs within the row
+                        const ps = row.querySelector('.product-select');
+                        const qs = row.querySelector('.quantity-input');
+                        const cs = row.querySelector('.unit-cost-input');
 
-                if (updatedRows.length === 0) {
+                        // Reset validation styles for this row
+                        ps?.classList.remove('border-red-500');
+                        qs?.classList.remove('border-red-500');
+                        cs?.classList.remove('border-red-500');
+
+                        // Basic validation for each row
+                         if (!ps?.value) {
+                             formIsValid = false;
+                             ps?.classList.add('border-red-500');
+                             if (msgDiv.innerHTML.indexOf('يرجى اختيار منتج') === -1) msgDiv.innerHTML += '<p class="text-red-600">يرجى اختيار منتج لكل سطر.</p>';
+                         }
+                         if (!qs?.value || parseInt(qs.value) <= 0 || isNaN(parseInt(qs.value))) {
+                             formIsValid = false;
+                             qs?.classList.add('border-red-500');
+                             if (msgDiv.innerHTML.indexOf('كمية صحيحة') === -1) msgDiv.innerHTML += '<p class="text-red-600">يرجى إدخال كمية صحيحة (أكبر من صفر).</p>';
+                         }
+                         if (!cs?.value || parseFloat(cs.value) < 0 || isNaN(parseFloat(cs.value))) {
+                             formIsValid = false;
+                             cs?.classList.add('border-red-500');
+                             if (msgDiv.innerHTML.indexOf('تكلفة وحدة صحيحة') === -1) msgDiv.innerHTML += '<p class="text-red-600">يرجى إدخال تكلفة وحدة صحيحة (غير سالبة).</p>';
+                         }
+
+
+                        // If row is valid, add its data to the updatedProducts array
+                        if (ps?.value && qs?.value && cs?.value && parseInt(qs.value) > 0 && parseFloat(cs.value) >= 0) {
+                             updatedProducts.push({
+                                product_id: parseInt(ps.value),
+                                quantity: parseInt(qs.value),
+                                unit_cost: parseFloat(cs.value)
+                                // No need for detail_id here, backend PUT replaces all details
+                             });
+                        } else {
+                            // If any row is invalid, the overall form is invalid
+                            formIsValid = false;
+                        }
+                     });
+                 }
+
+
+                 // Validate purchase date
+                if (!purchase_date) {
                     formIsValid = false;
-                    msgDiv.innerHTML += '<p class="text-red-600">يجب أن يحتوي سجل المشتريات على منتج واحد على الأقل.</p>';
+                    document.getElementById('purchaseDate')?.classList.add('border-red-500');
+                     if(msgDiv.innerHTML.indexOf('تاريخ الشراء مطلوب') === -1) msgDiv.innerHTML += '<p class="text-red-600">تاريخ الشراء مطلوب.</p>';
+                } else {
+                     document.getElementById('purchaseDate')?.classList.remove('border-red-500');
                 }
 
+
+                // If form is not valid, stop submission
                 if (!formIsValid) {
-                    msgDiv.innerHTML += '<p class="text-red-600">يرجى مراجعة الحقول المطلوبة والتأكد من إدخال قيم صحيحة.</p>';
+                     if(msgDiv.innerHTML === '') msgDiv.innerHTML = '<p class="text-red-600">يرجى مراجعة الحقول المطلوبة والتأكد من إدخال قيم صحيحة.</p>';
                     return;
                 }
 
                 try {
                     const payload = {
-                        supplier_name: supplier_name || null,
-                        purchase_date,
-                        notes: notes || null,
-                        products: updatedRows // Send updated rows including detail IDs
+                        supplier_name: supplier_name || null, // Send null if empty string
+                        purchase_date: purchase_date, // YYYY-MM-DD format
+                        notes: notes || null, // Send null if empty string
+                        products: updatedProducts // Array of { product_id, quantity, unit_cost }
                     };
-                     console.log("Sending Update Purchase Payload:", JSON.stringify(payload));
+                    console.log("Sending Update Purchase Payload:", JSON.stringify(payload));
 
-                    const res = await fetch(`http://localhost:3001/api/purchases/${editedPurchaseId}`, {
+                    const res = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
                     const result = await res.json();
-                     console.log("Update Purchase Response:", result);
+                    console.log("Update Purchase Response:", result);
 
                     if (res.ok) {
-                        loadPurchases(); // Reload list on success
+                         msgDiv.innerHTML = '<p class="text-green-600">تم تحديث المشتريات بنجاح.</p>';
+                        // Reload the purchases list after successful save
+                        setTimeout(loadPurchases, 1500);
                     } else {
+                        // Display error message from the backend response
                         const errorMsg = result.error || (result.details ? result.details.join(', ') : 'خطأ غير معروف');
                         msgDiv.innerHTML = `<p class="text-red-600">فشل تعديل المشتريات: ${errorMsg}</p>`;
                     }
-                } catch(error) {
+                } catch (error) {
                     console.error("Error updating purchase:", error);
                     msgDiv.innerHTML = '<p class="text-red-600">خطأ في الاتصال بالخادم لتعديل المشتريات.</p>';
                 }
             });
 
+
         } catch (error) {
-             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحضير نموذج تعديل المشتريات: ${error.message}</p><button onclick="loadPurchases()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المشتريات</button>`;
+            // Handle errors during form preparation (e.g., failed to fetch purchase data or products)
+            document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في تحضير نموذج تعديل المشتريات: ${error.message}</p>
+                <button onclick="loadPurchases()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المشتريات</button>`;
             console.error("Error preparing edit purchase form:", error);
         }
     }
-    // --- Delete Purchase ---
-    async function deletePurchase(purchaseId) {
-    if (!confirm(`هل أنت متأكد من حذف سجل المشتريات رقم ${purchaseId}؟ سيتم خصم كميات المنتجات من المخزون.`)) {
-        return;
-    }
 
-    try {
-        // 1. تحقق من وجود المشتريات وجلب تفاصيلها
-        const checkRes = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`);
-        if (!checkRes.ok) {
-            throw new Error('لم يتم العثور على سجل المشتريات');
-        }
-
-        const purchaseDetails = await checkRes.json();
-        if (!purchaseDetails || purchaseDetails.length === 0) {
-            throw new Error('لا توجد تفاصيل لهذا السجل');
-        }
-
-        // 2. محاولة حذف المشتريات
-        const deleteRes = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const result = await deleteRes.json();
-
-        if (deleteRes.ok) {
-            // 3. نجاح الحذف
-            alert('تم حذف سجل المشتريات وتحديث المخزون بنجاح');
-            loadPurchases(); // تحديث القائمة
-        } else {
-            // 4. فشل الحذف مع رسالة خطأ من الخادم
-            throw new Error(result.error || 'فشل حذف المشتريات');
-        }
-    } catch (error) {
-        console.error('Error deleting purchase:', error);
-        alert(`حدث خطأ أثناء محاولة حذف المشتريات: ${error.message}`);
-    }
-}
     // --- Show Purchase Details ---
     async function showPurchaseDetails(purchaseId) {
         try {
             const res = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`);
              if (!res.ok) {
                 const errData = await res.json();
-                throw new Error(errData.error || `Purchase record with ID ${purchaseId} not found`);
-            }
-            const data = await res.json();
-            let commonInfo, details;
-            if (Array.isArray(data)) {
-                if (!data.length) throw new Error('لا توجد تفاصيل لهذا السجل.');
-                commonInfo = {
-                    supplier_name: data[0].supplier_name,
-                    purchase_date: data[0].purchase_date,
-                    notes: data[0].notes
-                };
-                details = data.map(item => ({
-                    product_name: item.ProductName || item.product_name,
-                    unit_cost: item.UnitCost || item.unit_cost,
-                    quantity: item.Quantity || item.quantity
-                }));
-            } else {
-                commonInfo = {
-                    supplier_name: data.SupplierName || data.supplier_name,
-                    purchase_date: data.PurchaseDate || data.purchase_date,
-                    notes: data.Notes || data.notes
-                };
-                details = data.details || [];
-            }
-            let totalCost = 0;
-            let html = `<div class="max-w-2xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">`;
+                 throw new Error(errData.error || `Purchase record with ID ${purchaseId} not found`);
+             }
+            const purchaseData = await res.json(); // Expected: { ..., products: [...] }
+
+            // Calculate total cost from details array for display footer
+            let totalCostCalculated = 0;
+             if (purchaseData.products && Array.isArray(purchaseData.products)) {
+                 purchaseData.products.forEach(d => {
+                     totalCostCalculated += (d.Quantity || 0) * (d.UnitCost || 0);
+                 });
+             }
+
+
+            let html = `<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow-lg border border-gray-200">`;
             html += `<div class="flex justify-between items-center mb-6">
                         <h3 class="text-2xl font-semibold text-gray-800">تفاصيل المشتريات #${purchaseId}</h3>
                         <button onclick="loadPurchases()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">رجوع لقائمة المشتريات</button>
                      </div>`;
 
-            // Purchase Summary
-            html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-b pb-4">
-                        <div><strong class="text-gray-600">المورد:</strong> ${commonInfo.supplier_name || '-'}</div>
-                        <div><strong class="text-gray-600">تاريخ الشراء:</strong> ${formatDate(commonInfo.purchase_date)}</div>
-                        <div class="md:col-span-2"><strong class="text-gray-600">ملاحظات:</strong> ${commonInfo.notes || '-'}</div>
+            // Purchase Summary Section
+            html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 border-b pb-4 text-gray-700">
+                        <div><strong class="text-gray-600">رقم السجل:</strong> ${purchaseData.PurchaseID}</div>
+                        <div><strong class="text-gray-600">المورد:</strong> ${purchaseData.SupplierName || '-'}</div>
+                        <div><strong class="text-gray-600">تاريخ الشراء:</strong> ${formatDate(purchaseData.PurchaseDate)}</div>
+                        <div><strong class="text-gray-600">الإجمالي المحفوظ:</strong> ${purchaseData.TotalAmount ? purchaseData.TotalAmount.toFixed(2) : '0.00'}</div>
+                        <div class="md:col-span-2"><strong class="text-gray-600">ملاحظات:</strong> ${purchaseData.Notes || '-'}</div>
                      </div>`;
 
-            // Purchase Details (Products)
+            // Purchase Details (Products) Section
             html += `<h4 class="mt-4 mb-3 font-semibold text-lg text-gray-700">المنتجات المشتراة</h4>`;
-            html += `<table class="min-w-full bg-white border">
-                        <thead>
-                            <tr>
-                                <th class="border px-2 py-1 text-right">المنتج</th>
-                                <th class="border px-2 py-1 text-center">تكلفة الوحدة</th>
-                                <th class="border px-2 py-1 text-center">الكمية</th>
-                                <th class="border px-2 py-1 text-center">التكلفة الفرعية</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-            details.forEach(d => {
-                const subTotal = d.quantity * d.unit_cost;
-                totalCost += subTotal;
-                html += `<tr class="table-row">
-                            <td class="border px-2 py-1 text-right">${d.ProductName || 'منتج غير معروف'}</td>
-                            <td class="border px-2 py-1 text-center">${d.unit_cost.toFixed(2)}</td>
-                            <td class="border px-2 py-1 text-center">${d.quantity}</td>
-                            <td class="border px-2 py-1 text-center">${subTotal.toFixed(2)}</td>
-                         </tr>`;
-            });
-            html += `</tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" class="border px-2 py-1 text-right font-bold">الإجمالي</td>
-                                <td class="border px-2 py-1 text-center font-bold">${totalCost.toFixed(2)}</td>
-                            </tr>
-                        </tfoot>
-                     </table>`;
-            html += `</div>`;
+            if(purchaseData.products && purchaseData.products.length > 0) {
+                html += `<table class="min-w-full bg-white border">
+                            <thead>
+                                <tr>
+                                    <th class="border px-2 py-1 text-right">المنتج</th>
+                                    <th class="border px-2 py-1 text-center">تكلفة الوحدة</th>
+                                    <th class="border px-2 py-1 text-center">الكمية</th>
+                                    <th class="border px-2 py-1 text-center">التكلفة الفرعية</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                purchaseData.products.forEach(d => {
+                    const subTotal = (d.Quantity || 0) * (d.UnitCost || 0);
+                    html += `<tr class="table-row">
+                                <td class="border px-2 py-1 text-right">${d.ProductName || 'منتج غير معروف'}</td>
+                                <td class="border px-2 py-1 text-center">${(d.UnitCost || 0).toFixed(2)}</td>
+                                <td class="border px-2 py-1 text-center">${d.Quantity || 0}</td>
+                                <td class="border px-2 py-1 text-center">${subTotal.toFixed(2)}</td>
+                             </tr>`;
+                });
+                html += `</tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="border px-2 py-1 text-right font-bold">الإجمالي المحسوب من المنتجات المعروضة</td>
+                                    <td class="border px-2 py-1 text-center font-bold">${totalCostCalculated.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                         </table>`;
+                 // Note: The "الإجمالي المحسوب من المنتجات المعروضة" might differ slightly from "الإجمالي المحفوظ"
+                 // if details were added/removed directly in DB without updating the header total,
+                 // or if there was rounding. Displaying both can be helpful.
+            } else {
+                html += `<p class="text-gray-500">لا توجد تفاصيل منتجات لهذا السجل.</p>`;
+            }
+            html += '</div>'; // Close main container
             document.getElementById('content').innerHTML = html;
+
         } catch (error) {
-             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في عرض تفاصيل المشتريات: ${error.message}</p><button onclick="loadPurchases()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المشتريات</button>`;
-             console.error("Error showing purchase details:", error);
+            // Handle errors (e.g., purchase not found, API error)
+             document.getElementById('content').innerHTML = `<p class="text-red-600 p-4">خطأ في عرض تفاصيل المشتريات: ${error.message}</p>
+                 <button onclick="loadPurchases()" class="bg-gray-500 text-white px-3 py-1 rounded mt-2">العودة لقائمة المشتريات</button>`;
+            console.error("Error showing purchase details:", error);
         }
+
     }
 
+    async function deletePurchase(purchaseId) {
+        if (!confirm(`هل أنت متأكد من حذف سجل المشتريات رقم ${purchaseId}؟ سيتم عكس تأثيره على كميات المنتجات وتكاليفها في المخزن.`)) return;
+        try {
+            const res = await fetch(`http://localhost:3001/api/purchases/${purchaseId}`, { method: 'DELETE' });
+            const result = await res.json(); // Get response body even on error
+            if (res.ok) {
+                alert('تم حذف سجل المشتريات بنجاح.');
+                loadPurchases(); // Refresh the list
+            } else {
+                // Display error message from the backend response
+                alert(`فشل حذف المشتريات: ${result.error || 'خطأ غير معروف'}`);
+            }
+        } catch (error) {
+            console.error('Error deleting purchase:', error);
+            alert('حدث خطأ أثناء محاولة حذف المشتريات.');
+        }
+     }
+
+
+    // Navigation handler (already exists, ensure it calls loadPage)
+    document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', e => {
+        e.preventDefault();
+        const page = a.getAttribute('data-page');
+        loadPage(page);
+    }));
+
+             
+  
 
     // navigation handler
     document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', e => {

@@ -767,293 +767,277 @@ backend.post('/api/purchases', (req, res) => {
   });
 });
 
-backend.put('/api/purchases/:id', (req, res) => {
-  const purchaseID = req.params.id;
-  const { supplier_name, notes, products } = req.body;
-  
-  if (!supplier_name || !Array.isArray(products)) {
-    return res.status(400).json({ error: 'بيانات غير كاملة' });
-  }
-  
-  const now = getCurrentDateTime();
-  
+
+
+// Helper function to calculate weighted average cost
+function calculateWeightedAverageCost(oldQty, oldCost, newQty, newCost) {
+  const totalOldCost = (oldQty || 0) * (oldCost || 0);
+  const totalNewCost = (newQty || 0) * (newCost || 0);
+  const totalQuantity = (oldQty || 0) + (newQty || 0);
+  if (totalQuantity <= 0) return 0;
+  return (totalOldCost + totalNewCost) / totalQuantity;
+}
+
+// Helper function to reverse weighted average cost effect
+function reverseWeightedAverageCost(currentQty, currentCost, removedQty, removedCost) {
+    const currentTotalCost = (currentQty || 0) * (currentCost || 0);
+    const removedTotalCost = (removedQty || 0) * (removedCost || 0);
+    const remainingTotalCost = Math.max(0, currentTotalCost - removedTotalCost); // Ensure non-negative
+    const remainingQuantity = Math.max(0, (currentQty || 0) - (removedQty || 0)); // Ensure non-negative
+
+    if (remainingQuantity <= 0) return 0;
+    return remainingTotalCost / remainingQuantity;
+}
+
+backend.get('/api/purchases/:id', (req, res) => {
+  const id = req.params.id;
+
   db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
-    
-    // Get current purchase details
-    db.get(
-      'SELECT * FROM purchases WHERE PurchaseID = ?',
-      [purchaseID],
-      (err, purchase) => {
-        if (err || !purchase) {
-          db.run('ROLLBACK');
-          return res.status(404).json({ error: 'المشتريات غير موجودة' });
-        }
-        
-        // Get current purchase details
-        db.all(
-          'SELECT * FROM purchase_details WHERE PurchaseID = ?',
-          [purchaseID],
-          (err, oldDetails) => {
-            if (err) {
-              db.run('ROLLBACK');
-              return res.status(500).json({ error: 'خطأ في استرجاع تفاصيل المشتريات' });
-            }
-            
-            // Update purchase record
-            db.run(
-              'UPDATE purchases SET SupplierName = ?, Notes = ?, updated_at = ? WHERE PurchaseID = ?',
-              [supplier_name, notes || '', now, purchaseID]
-            );
-            
-            // Update product quantities for old details (subtract old quantities)
-            oldDetails.forEach(detail => {
-              
-              db.get(
-                'SELECT StockQuantity, UnitCost FROM products WHERE ProductID = ?',
-                [detail.ProductID],
-                (err, product) => {
-                  if (err) {
-                    db.run('ROLLBACK');
-                    return res.status(500).json({ error: 'خطأ في استرجاع بيانات المنتج' });
-                  }
-                  const currentQty = product.StockQuantity || 0;
-                  const currentCost = product.UnitCost || 0;
-                  const newQty = currentQty - detail.Quantity;
-                  const totalCost = currentQty * currentCost;
-                  const removeCost = detail.Quantity * detail.UnitCost;
-                  const remainingTotalCost = totalCost - removeCost;
-                  const newUnitCost = newQty > 0 ? remainingTotalCost / newQty : 0;
-                  db.run(
-                    'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
-                    [newQty, newUnitCost, now, detail.ProductID]
-                  );
-                }
-              );
-            });
-            
-            // Delete old purchase details
-            db.run('DELETE FROM purchase_details WHERE PurchaseID = ?', [purchaseID]);
-            
-            let totalAmount = 0;
-            
-            // Add new purchase details and update product quantities
-            products.forEach(item => {
-              const { product_id, product_name, category, quantity, unit_cost, unit_price } = item;
-              
-              // If product exists, update its cost
-              if (product_id) {
-                db.get('SELECT StockQuantity, UnitCost FROM products WHERE ProductID = ?', [product_id], (err, product) => {
-                  if (err) {
-                    db.run('ROLLBACK');
-                    return res.status(500).json({ error: 'خطأ في تحديث المنتج' });
-                  }
-                  
-                  const oldQuantity = product.StockQuantity || 0;
-                  const oldCost = product.UnitCost || 0;
-                  const newQuantity = quantity;
-                  const newCost = unit_cost;
-                  
-                  // Calculate weighted average cost
-                  const totalOldCost = oldQuantity * oldCost;
-                  const totalNewCost = newQuantity * newCost;
-                  const totalQuantity = oldQuantity + newQuantity;
-                  const newUnitCost = (totalOldCost + totalNewCost) / totalQuantity;
-                  
-                  // Update product
-                  db.run(
-                    'UPDATE products SET StockQuantity = StockQuantity + ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
-                    [quantity, newUnitCost, now, product_id]
-                  );
-                });
-              } else {
-                // New product
-                db.run(
-                  'INSERT INTO products (ProductName, Category, StockQuantity, UnitPrice, UnitCost, IsActive, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                  [product_name, category, quantity, unit_price, unit_cost, 1, now, now],
-                  function(err) {
-                    if (err) {
-                      db.run('ROLLBACK');
-                      return res.status(500).json({ error: 'خطأ في إضافة المنتج الجديد' });
-                    }
-                  }
-                );
-              }
-              
-              // Calculate subtotal for purchase details
-              const subTotal = quantity * unit_cost;
-              totalAmount += subTotal;
-              
-              // Add purchase detail
-              db.run(
-                'INSERT INTO purchase_details (PurchaseID, ProductID, Quantity, UnitCost, SubTotal, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [purchaseID, product_id, quantity, unit_cost, subTotal, now, now]
-              );
-            });
-            
-            // Update total amount in purchase
-            db.run(
-              'UPDATE purchases SET TotalAmount = ?, updated_at = ? WHERE PurchaseID = ?',
-              [totalAmount, now, purchaseID]
-            );
-            
-            db.run('COMMIT', err => {
-              if (err) {
-                db.run('ROLLBACK');
-                return res.status(500).json({ error: 'خطأ في تحديث المشتريات' });
-              }
-              res.json({ purchaseID, totalAmount });
-            });
-          }
-        );
+    // 1. Get purchase header
+    db.get(`
+      SELECT
+        p.*,
+        COALESCE(s.Name, p.SupplierName) as SupplierDisplayName -- Use Supplier Name from suppliers table if linked
+      FROM purchases p
+      LEFT JOIN suppliers s ON p.SupplierName = s.Name -- Assuming SupplierName in purchases stores Name or ID
+      WHERE p.PurchaseID = ?
+    `, [id], (err, purchase) => {
+      if (err || !purchase) {
+        console.error('Error fetching purchase header:', err);
+        return res.status(404).json({ error: 'المشتريات غير موجودة' });
       }
-    );
+
+      // 2. Get purchase details (products)
+      db.all(`
+        SELECT
+          pd.*,
+          pr.ProductName,
+          pr.Category,
+          pr.UnitPrice -- Include UnitPrice from product for reference in edit form
+        FROM purchase_details pd
+        LEFT JOIN products pr ON pd.ProductID = pr.ProductID
+        WHERE pd.PurchaseID = ?
+      `, [id], (err, details) => {
+        if (err) {
+          console.error('Error fetching purchase details:', err);
+          details = []; // Return empty array if fetching details fails
+        }
+
+        // Structure the response
+        res.json({
+          PurchaseID: purchase.PurchaseID,
+          SupplierName: purchase.SupplierDisplayName || purchase.SupplierName || '', // Use display name, fallback to original, then empty
+          PurchaseDate: purchase.PurchaseDate,
+          TotalAmount: purchase.TotalAmount, // Return the saved total amount
+          Notes: purchase.Notes || '',
+          products: details.map(d => ({
+            PurchaseDetailID: d.PurchaseDetailID, // Keep detail ID
+            ProductID: d.ProductID,
+            ProductName: d.ProductName || 'منتج محذوف', // Fallback name
+            Category: d.Category || 'غير محدد',
+            Quantity: d.Quantity,
+            UnitCost: d.UnitCost,
+            SubTotal: d.SubTotal,
+            UnitPrice: d.UnitPrice // Price from product table
+          }))
+        });
+      });
+    });
   });
 });
 
-backend.delete('/api/purchases/:id', (req, res) => {
+
+// Update purchase - IMPROVED
+backend.put('/api/purchases/:id', (req, res) => {
   const purchaseID = req.params.id;
+  const { supplier_name, purchase_date, notes, products } = req.body; // Expecting products array
+
+  if (!purchase_date || !Array.isArray(products)) {
+    return res.status(400).json({ error: 'بيانات غير كاملة أو غير صحيحة' });
+  }
+
   const now = getCurrentDateTime();
-  
+
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
-    
-    // First get the purchase record to check its type (from products or purchases page)
-    db.get('SELECT * FROM purchases WHERE PurchaseID = ?', [purchaseID], (err, purchase) => {
-      if (err || !purchase) {
+
+    // 1. Get the old purchase details to reverse their effect
+    db.all('SELECT PurchaseDetailID, ProductID, Quantity, UnitCost FROM purchase_details WHERE PurchaseID = ?', [purchaseID], (err, oldDetails) => {
+      if (err) {
         db.run('ROLLBACK');
-        return res.status(500).json({ error: 'خطأ في استرجاع المشتريات' });
+        console.error("Error fetching old purchase details:", err);
+        return res.status(500).json({ error: 'خطأ في استرجاع تفاصيل المشتريات القديمة' });
       }
 
-      // Check if it's a direct product purchase
-      if (purchase.ProductID) {
-        // Handle direct product purchase deletion
-        db.get('SELECT * FROM products WHERE ProductID = ?', [purchase.ProductID], (err, product) => {
-          if (err || !product) {
-            db.run('ROLLBACK');
-            return res.status(500).json({ error: 'خطأ في استرجاع بيانات المنتج' });
+      let productsToUpdate = {}; // Map ProductID to { oldQty, oldCost, newQty, newCost }
+
+      // Add old details to the map
+      oldDetails.forEach(d => {
+        if (d.ProductID) {
+          if (!productsToUpdate[d.ProductID]) {
+            productsToUpdate[d.ProductID] = { ProductID: d.ProductID, removedQty: 0, removedCostTotal: 0, addedQty: 0, addedCostTotal: 0 };
           }
+          productsToUpdate[d.ProductID].removedQty += d.Quantity;
+          productsToUpdate[d.ProductID].removedCostTotal += d.Quantity * d.UnitCost;
+        }
+      });
 
-          const currentQty = product.StockQuantity || 0;
-          const purchaseQty = purchase.Quantity || 0;
-          const newQty = Math.max(0, currentQty - purchaseQty);
+      // Add new details to the map
+      products.forEach(item => {
+         // Basic validation for new items
+         if (item.product_id == null || item.quantity == null || item.unit_cost == null || item.quantity <= 0 || item.unit_cost < 0) {
+              db.run('ROLLBACK');
+              return res.status(400).json({ error: 'بيانات منتج جديدة غير صحيحة', item: item });
+         }
 
-          // Calculate new unit cost by removing this purchase's effect
-          const currentTotalCost = currentQty * (product.UnitCost || 0);
-          const purchaseTotalCost = purchaseQty * (purchase.UnitCost || 0);
-          const newTotalCost = Math.max(0, currentTotalCost - purchaseTotalCost);
-          const newUnitCost = newQty > 0 ? newTotalCost / newQty : 0;
+        if (!productsToUpdate[item.product_id]) {
+          productsToUpdate[item.product_id] = { ProductID: item.product_id, removedQty: 0, removedCostTotal: 0, addedQty: 0, addedCostTotal: 0 };
+        }
+        productsToUpdate[item.product_id].addedQty += item.quantity;
+        productsToUpdate[item.product_id].addedCostTotal += item.quantity * item.unit_cost;
+      });
 
-          // Update product
-          db.run(
-            'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
-            [newQty, newUnitCost, now, purchase.ProductID],
-            (err) => {
-              if (err) {
-                db.run('ROLLBACK');
-                return res.status(500).json({ error: 'خطأ في تحديث المنتج' });
-              }
 
-              // Delete the purchase
-              db.run('DELETE FROM purchases WHERE PurchaseID = ?', [purchaseID], function(err) {
-                if (err) {
-                  db.run('ROLLBACK');
-                  return res.status(500).json({ error: 'خطأ في حذف المشتريات' });
-                }
-                db.run('COMMIT', (err) => {
-                  if (err) {
-                    db.run('ROLLBACK');
-                    return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
-                  }
-                  res.json({ deleted: true, productUpdated: true });
-                });
-              });
-            }
-          );
-        });
-      } else {
-        // Handle purchase with details
-        db.all('SELECT * FROM purchase_details WHERE PurchaseID = ?', [purchaseID], (err, details) => {
-          if (err) {
-            db.run('ROLLBACK');
-            return res.status(500).json({ error: 'خطأ في استرجاع تفاصيل المشتريات' });
-          }
+      // 2. Delete old purchase details
+      db.run('DELETE FROM purchase_details WHERE PurchaseID = ?', [purchaseID], function(err) {
+        if (err) {
+          db.run('ROLLBACK');
+          console.error("Error deleting old purchase details:", err);
+          return res.status(500).json({ error: 'خطأ في حذف تفاصيل المشتريات القديمة' });
+        }
 
-          let processedDetails = 0;
-          
-          if (!details || details.length === 0) {
-            // No details, just delete the purchase
-            completeDeletion();
-            return;
-          }
+        let totalAmount = 0;
+        let detailsAddedCount = 0;
+        const totalDetailsToAdd = products.length;
 
-          details.forEach(detail => {
-            if (!detail.ProductID) {
-              processedDetails++;
-              if (processedDetails === details.length) {
-                completeDeletion();
-              }
-              return;
-            }
+        // 3. Insert new purchase details and update product stock/cost
+        if (totalDetailsToAdd === 0) {
+             // If no products are in the new list, just update the purchase header and product stocks
+             processProductUpdates();
+        } else {
+            products.forEach(item => {
+              const { product_id, quantity, unit_cost } = item;
+              const subTotal = quantity * unit_cost;
+              totalAmount += subTotal;
 
-            db.get('SELECT * FROM products WHERE ProductID = ?', [detail.ProductID], (err, product) => {
-              if (err || !product) {
-                processedDetails++;
-                if (processedDetails === details.length) {
-                  completeDeletion();
-                }
-                return;
-              }
-
-              const currentQty = product.StockQuantity || 0;
-              const detailQty = detail.Quantity || 0;
-              const newQty = Math.max(0, currentQty - detailQty);
-
-              // Calculate new unit cost by removing this detail's effect
-              const currentTotalCost = currentQty * (product.UnitCost || 0);
-              const detailTotalCost = detailQty * (detail.UnitCost || 0);
-              const newTotalCost = Math.max(0, currentTotalCost - detailTotalCost);
-              const newUnitCost = newQty > 0 ? newTotalCost / newQty : 0;
-
+              // Insert new detail
               db.run(
-                'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
-                [newQty, newUnitCost, now, detail.ProductID],
-                () => {
-                  processedDetails++;
-                  if (processedDetails === details.length) {
-                    completeDeletion();
+                'INSERT INTO purchase_details (PurchaseID, ProductID, Quantity, UnitCost, SubTotal, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [purchaseID, product_id, quantity, unit_cost, subTotal, now, now],
+                function(err) {
+                  if (err) {
+                    // Log error but don't necessarily rollback immediately unless critical
+                    console.error(`Error inserting new purchase detail for product ${product_id}:`, err);
+                    // Continue processing others, handle potential partial update issue later or add robust error check
+                  }
+                  detailsAddedCount++;
+                  if (detailsAddedCount === totalDetailsToAdd) {
+                    // All details inserted (or attempted), now process product updates
+                    processProductUpdates();
                   }
                 }
               );
             });
-          });
-        });
-      }
+        }
 
-      function completeDeletion() {
-        db.run('DELETE FROM purchase_details WHERE PurchaseID = ?', [purchaseID], err => {
-          if (err) {
-            db.run('ROLLBACK');
-            return res.status(500).json({ error: 'خطأ في حذف تفاصيل المشتريات' });
-          }
-          
-          db.run('DELETE FROM purchases WHERE PurchaseID = ?', [purchaseID], function(err) {
-            if (err) {
-              db.run('ROLLBACK');
-              return res.status(500).json({ error: 'خطأ في حذف المشتريات' });
+
+        function processProductUpdates() {
+            let productUpdateCount = 0;
+            const productIdsToUpdate = Object.keys(productsToUpdate);
+            const totalProductsToUpdate = productIdsToUpdate.length;
+
+            if (totalProductsToUpdate === 0) {
+                 // If no products were involved (e.g., updated notes only, or empty products list),
+                 // just update the purchase header and commit.
+                 updatePurchaseHeaderAndCommit();
+                 return;
             }
-            
-            db.run('COMMIT', err => {
-              if (err) {
-                db.run('ROLLBACK');
-                return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
-              }
-              res.json({ deleted: true });
+
+            productIdsToUpdate.forEach(pId => {
+                const pUpdate = productsToUpdate[pId];
+                db.get('SELECT StockQuantity, UnitCost FROM products WHERE ProductID = ?', [pUpdate.ProductID], (err, product) => {
+                    if (err || !product) {
+                       console.error(`Error fetching product ${pUpdate.ProductID} for update:`, err);
+                       // This is a significant error, might need rollback or careful handling
+                       productUpdateCount++; // Count it even on error to finish the loop
+                       if (productUpdateCount === totalProductsToUpdate) {
+                           updatePurchaseHeaderAndCommit();
+                       }
+                       return;
+                    }
+
+                    // Calculate the quantity and cost *before* this specific purchase's old details
+                    // This requires a more complex historical cost tracking or recalculating from all *other* purchases.
+                    // A simpler approach is to reverse the old effect, then apply the new effect.
+
+                    // 1. Reverse the effect of the old details from this purchase
+                    const qtyAfterRemovingOld = product.StockQuantity - pUpdate.removedQty;
+                    // This reversal of cost is complex if other purchases happened since the original.
+                    // A simpler (but less historically accurate) approach is to:
+                    // Get current total cost: CurrentQty * CurrentCost
+                    // Subtract the cost removed by deleting old details: removedQty * original_cost_of_those_items
+                    // Problem: We don't easily have the *original* cost from the old detail here unless we fetched it earlier.
+                    // Let's stick to the logic already present in DELETE: reverse weighted average.
+
+                    // Calculate cost after reversing the OLD quantities/costs from THIS purchase
+                    const costAfterRemovingOld = reverseWeightedAverageCost(product.StockQuantity, product.UnitCost, pUpdate.removedQty, pUpdate.removedCostTotal / (pUpdate.removedQty || 1));
+
+                    // Calculate quantity after applying the NEW quantities from THIS purchase
+                    const finalQty = qtyAfterRemovingOld + pUpdate.addedQty;
+
+                     // Calculate cost after applying the NEW quantities/costs from THIS purchase
+                     // This calculation should use the cost *after removing old* as the "old" base for the "new" addition
+                     const finalCost = calculateWeightedAverageCost(qtyAfterRemovingOld, costAfterRemovingOld, pUpdate.addedQty, pUpdate.addedCostTotal / (pUpdate.addedQty || 1));
+
+
+                    // Update product
+                    db.run(
+                      'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
+                      [finalQty, finalCost, now, pUpdate.ProductID],
+                      (err) => {
+                        if (err) {
+                          console.error(`Error updating product stock/cost for ${pUpdate.ProductID}:`, err);
+                          // Handle error, potentially rollback
+                        }
+                        productUpdateCount++;
+                        if (productUpdateCount === totalProductsToUpdate) {
+                          // All product updates done (or attempted), now update purchase header and commit
+                          updatePurchaseHeaderAndCommit();
+                        }
+                      }
+                    );
+                });
             });
-          });
-        });
-      }
-    });
+        }
+
+
+        function updatePurchaseHeaderAndCommit() {
+             // 4. Update total amount and header in purchase
+            db.run(
+              'UPDATE purchases SET SupplierName = ?, PurchaseDate = ?, TotalAmount = ?, Notes = ?, updated_at = ? WHERE PurchaseID = ?',
+              [supplier_name, purchase_date, totalAmount, notes || '', now, purchaseID],
+              function(err) {
+                if (err) {
+                  db.run('ROLLBACK');
+                   console.error("Error updating purchase header:", err);
+                  return res.status(500).json({ error: 'خطأ في تحديث سجل المشتريات الرئيسي' });
+                }
+
+                // 5. Commit the transaction
+                db.run('COMMIT', err => {
+                  if (err) {
+                    db.run('ROLLBACK');
+                     console.error("Error committing purchase update transaction:", err);
+                    return res.status(500).json({ error: 'خطأ في حفظ المعاملة' });
+                  }
+                  res.json({ purchaseID: purchaseID, totalAmount: totalAmount });
+                });
+              }
+            );
+        }
+
+      }); // End oldDetails db.all
+    }); // End db.serialize
   });
 });
 
@@ -1134,7 +1118,117 @@ backend.get('/api/purchases/:id', (req, res) => {
       }
     });
   });
+
 });
+
+backend.delete('/api/purchases/:id', (req, res) => {
+  const purchaseID = req.params.id;
+  const now = getCurrentDateTime();
+
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+
+    // 1. Get the details to reverse product stock/cost changes
+    db.all('SELECT ProductID, Quantity, UnitCost FROM purchase_details WHERE PurchaseID = ?', [purchaseID], (err, details) => {
+      if (err) {
+        db.run('ROLLBACK');
+        console.error('Error fetching purchase details for deletion:', err);
+        return res.status(500).json({ error: 'خطأ في استرجاع تفاصيل المشتريات للحذف' });
+      }
+
+      let processedDetails = 0;
+      const totalDetails = details.length;
+
+       if (totalDetails === 0) {
+           // No details, just delete the purchase header
+           deletePurchaseHeaderAndCommit();
+           return;
+       }
+
+
+      details.forEach(detail => {
+        if (!detail.ProductID) {
+          processedDetails++;
+          if (processedDetails === totalDetails) {
+            deleteDetailsAndPurchaseHeader();
+          }
+          return;
+        }
+
+        // Get current product data
+        db.get(
+          'SELECT StockQuantity, UnitCost FROM products WHERE ProductID = ?',
+          [detail.ProductID],
+          (err, product) => {
+            if (err || !product) {
+               console.warn(`Product ${detail.ProductID} not found or error fetching for deletion reversal. Skipping stock update.`, err);
+               processedDetails++; // Still count this detail as processed
+               if (processedDetails === totalDetails) {
+                  deleteDetailsAndPurchaseHeader();
+               }
+               return;
+            }
+
+            // Reverse the effect of this specific detail on the product's stock and weighted average cost
+            const newQty = Math.max(0, (product.StockQuantity || 0) - (detail.Quantity || 0));
+            const newUnitCost = reverseWeightedAverageCost(product.StockQuantity, product.UnitCost, detail.Quantity, detail.UnitCost);
+
+
+            // Update product stock and cost
+            db.run(
+              'UPDATE products SET StockQuantity = ?, UnitCost = ?, updated_at = ? WHERE ProductID = ?',
+              [newQty, newUnitCost, now, detail.ProductID],
+              (err) => {
+                if (err) {
+                   console.error(`Error updating product ${detail.ProductID} stock/cost during purchase deletion:`, err);
+                   // Continue, but log the error
+                }
+                processedDetails++;
+                if (processedDetails === totalDetails) {
+                  // All product updates done (or attempted)
+                  deleteDetailsAndPurchaseHeader();
+                }
+              }
+            );
+          }
+        ); // End db.get product
+      }); // End details.forEach
+    }); // End db.all details
+
+    function deleteDetailsAndPurchaseHeader() {
+         // 2. Delete the purchase details
+        db.run('DELETE FROM purchase_details WHERE PurchaseID = ?', [purchaseID], err => {
+          if (err) {
+            db.run('ROLLBACK');
+            console.error('Error deleting purchase details:', err);
+            return res.status(500).json({ error: 'خطأ في حذف تفاصيل المشتريات' });
+          }
+          // 3. Delete the purchase header
+          deletePurchaseHeaderAndCommit();
+        });
+    }
+
+    function deletePurchaseHeaderAndCommit() {
+         db.run('DELETE FROM purchases WHERE PurchaseID = ?', [purchaseID], function(err) {
+            if (err) {
+              db.run('ROLLBACK');
+              console.error('Error deleting purchase header:', err);
+              return res.status(500).json({ error: 'خطأ في حذف المشتريات الرئيسية' });
+            }
+            // 4. Commit the transaction
+            db.run('COMMIT', err => {
+              if (err) {
+                db.run('ROLLBACK');
+                console.error('Error committing purchase deletion transaction:', err);
+                return res.status(500).json({ error: 'خطأ في حفظ التغييرات' });
+              }
+              res.json({ deleted: true });
+            });
+          });
+    }
+  }); // End db.serialize
+});
+
 
 // Get all expenses
 backend.get('/api/expenses', (req, res) => {

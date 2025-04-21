@@ -16,4 +16,3 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ... other exposed methods
 });
 
-});
