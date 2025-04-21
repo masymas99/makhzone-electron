@@ -643,7 +643,7 @@
             <td class="border px-2 py-1">${e.Description}</td>
             <td class="border px-2 py-1">${e.Amount.toFixed(2)}</td>
             <td class="border px-2 py-1">${formatDate(e.ExpenseDate)}</td>
-            <td class="border px-2 py-1"><button data-id="${e.ExpenseID}" class="edit-expense text-yellow-600 hover:underline mr-2">تعديل</button><button data-id="${e.ExpenseID}" class="delete-expense text-red-600 hover:underline">حذف</button></td>
+            <td class="border px-2 py-1"><button data-id="${e.ExpenseID}" class="delete-expense text-red-600 hover:underline">حذف</button></td>
           </tr>`;
         });
       } else html += '<tr><td colspan="5" class="text-center py-2">لا توجد بيانات</td></tr>';
@@ -2436,11 +2436,11 @@ async function deleteExpense(expenseId) {
                 c.name = `pCost${rowId}`;
                 c.type = 'number';
                 c.step = '0.01';
-                c.min = 0;
+                c.min = 0.01; // Changed from 0 to 0.01 to prevent zero cost
                 c.placeholder = 'تكلفة الوحدة';
                 c.className = 'md:col-span-2';
                 c.required = true;
-                 c.value = detail ? detail.UnitCost.toFixed(2) : ''; // Pre-fill if editing
+                c.value = detail ? detail.UnitCost.toFixed(2) : '';
                 c.addEventListener('input', updatePurchaseTotal);
 
 
@@ -2455,29 +2455,26 @@ async function deleteExpense(expenseId) {
 
                 div.append(sel, q, c, rm);
                 purchaseRowsContainer.append(div);
-                 // Auto-fill cost for existing detail on load
-                 if (detail) {
+                if (detail) {
                     const selectedOption = sel.options[sel.selectedIndex];
                     if (selectedOption && selectedOption.value === String(detail.ProductID)) {
                         // c.value = detail.UnitCost.toFixed(2); // Already set above
                     }
-                 }
+                }
             };
 
-             // Re-use updatePurchaseTotal function
-             const updatePurchaseTotal = () => {
-                 // (Identical logic to updatePurchaseTotal in showAddPurchaseForm)
-                 let total = 0;
-                 document.querySelectorAll('.purchase-product-row').forEach(row => {
+            const updatePurchaseTotal = () => {
+                let total = 0;
+                document.querySelectorAll('.purchase-product-row').forEach(row => {
                     const rowId = row.dataset.rowId;
                     const quantityInput = document.getElementById(`pQuantity${rowId}`);
                     const costInput = document.getElementById(`pCost${rowId}`);
                     const productSelect = document.getElementById(`pProduct${rowId}`);
 
-                     if (productSelect && productSelect.value && quantityInput && quantityInput.value && costInput && costInput.value) {
+                    if (productSelect && productSelect.value && quantityInput && quantityInput.value && costInput && costInput.value) {
                         const quantity = parseInt(quantityInput.value);
                         const cost = parseFloat(costInput.value);
-                         if (!isNaN(quantity) && quantity > 0 && !isNaN(cost) && cost >= 0) {
+                        if (!isNaN(quantity) && quantity > 0 && !isNaN(cost) && cost > 0) { // Changed from cost >= 0 to cost > 0
                             total += quantity * cost;
                         }
                     }
@@ -2485,40 +2482,39 @@ async function deleteExpense(expenseId) {
                 purchaseTotalDisplay.textContent = total.toFixed(2);
             };
 
-            // Add the first row initially
             addPurchaseRow();
             updatePurchaseTotal();
 
-
-            // Event listeners
-            document.getElementById('addPurchaseRowBtn')?.addEventListener('click', () => addPurchaseRow()); // Add new empty row
+            document.getElementById('addPurchaseRowBtn')?.addEventListener('click', () => addPurchaseRow());
             document.getElementById('cancelAddPurchase')?.addEventListener('click', loadPurchases);
 
-            // Form submission handler
             document.getElementById('purchaseForm')?.addEventListener('submit', async e => {
                 e.preventDefault();
-                 const msgDiv = document.getElementById('purchaseMsg');
-                 msgDiv.innerHTML = '';
+                const msgDiv = document.getElementById('purchaseMsg');
+                msgDiv.innerHTML = '';
 
-                 const supplier_name = document.getElementById('supplierName').value.trim();
-                 const purchase_date = document.getElementById('purchaseDate').value;
-                 const notes = document.getElementById('notes').value.trim();
-                 const rows = [];
-                 let formIsValid = true;
+                const supplier_name = document.getElementById('supplierName').value.trim();
+                const purchase_date = document.getElementById('purchaseDate').value;
+                const notes = document.getElementById('notes').value.trim();
+                const rows = [];
+                let formIsValid = true;
 
-                 document.querySelectorAll('.purchase-product-row').forEach(row => {
+                document.querySelectorAll('.purchase-product-row').forEach(row => {
                     const rowId = row.dataset.rowId;
                     const ps = document.getElementById(`pProduct${rowId}`);
                     const qs = document.getElementById(`pQuantity${rowId}`);
                     const cs = document.getElementById(`pCost${rowId}`);
 
-                     if (ps && ps.value && qs && qs.value && cs && cs.value) {
-                         const quantity = +qs.value;
-                         const cost = +cs.value;
-                        if (quantity <= 0 || cost < 0) {
-                             formIsValid = false;
-                             qs.classList.toggle('border-red-500', quantity <= 0);
-                             cs.classList.toggle('border-red-500', cost < 0);
+                    if (ps && ps.value && qs && qs.value && cs && cs.value) {
+                        const quantity = +qs.value;
+                        const cost = +cs.value;
+                        if (quantity <= 0 || cost <= 0) { // Changed from cost < 0 to cost <= 0
+                            formIsValid = false;
+                            qs.classList.toggle('border-red-500', quantity <= 0);
+                            cs.classList.toggle('border-red-500', cost <= 0);
+                            if (cost <= 0) {
+                                msgDiv.innerHTML += '<p class="text-red-600">لا يمكن أن تكون تكلفة الوحدة صفر أو أقل.</p>';
+                            }
                         } else {
                             qs.classList.remove('border-red-500');
                             cs.classList.remove('border-red-500');
@@ -2528,20 +2524,20 @@ async function deleteExpense(expenseId) {
                                 unit_cost: cost
                             });
                         }
-                     } else if (ps || qs || cs) {
-                         formIsValid = false;
-                         ps?.classList.toggle('border-red-500', !ps?.value);
-                         qs?.classList.toggle('border-red-500', !qs?.value);
-                         cs?.classList.toggle('border-red-500', !cs?.value);
-                     }
+                    } else if (ps || qs || cs) {
+                        formIsValid = false;
+                        ps?.classList.toggle('border-red-500', !ps?.value);
+                        qs?.classList.toggle('border-red-500', !qs?.value);
+                        cs?.classList.toggle('border-red-500', !cs?.value);
+                    }
                 });
 
                 if (!purchase_date) {
-                     formIsValid = false;
-                     document.getElementById('purchaseDate').classList.add('border-red-500');
-                     msgDiv.innerHTML += '<p class="text-red-600">تاريخ الشراء مطلوب.</p>';
+                    formIsValid = false;
+                    document.getElementById('purchaseDate').classList.add('border-red-500');
+                    msgDiv.innerHTML += '<p class="text-red-600">تاريخ الشراء مطلوب.</p>';
                 } else {
-                     document.getElementById('purchaseDate').classList.remove('border-red-500');
+                    document.getElementById('purchaseDate').classList.remove('border-red-500');
                 }
 
                 if (rows.length === 0) {
@@ -2556,12 +2552,12 @@ async function deleteExpense(expenseId) {
 
                 try {
                     const payload = {
-                        supplier_name: supplier_name || null, // Allow null supplier
+                        supplier_name: supplier_name || null,
                         purchase_date,
                         notes: notes || null,
                         products: rows
                     };
-                     console.log("Sending Purchase Payload:", JSON.stringify(payload));
+                    console.log("Sending Purchase Payload:", JSON.stringify(payload));
 
                     const res = await fetch('http://localhost:3001/api/purchases', {
                         method: 'POST',
@@ -2572,7 +2568,7 @@ async function deleteExpense(expenseId) {
                     console.log("Purchase Response:", result);
 
                     if (res.ok) {
-                        loadPurchases(); // Reload list on success
+                        loadPurchases();
                     } else {
                         const errorMsg = result.error || (result.details ? result.details.join(', ') : 'خطأ غير معروف');
                         msgDiv.innerHTML = `<p class="text-red-600">فشل حفظ المشتريات: ${errorMsg}</p>`;
@@ -2587,8 +2583,7 @@ async function deleteExpense(expenseId) {
             console.error("Error preparing add purchase form:", error);
         }
     }
-    // Function to show edit purchase form
-    
+
     async function showEditPurchaseForm(purchaseId) {
         try {
             // Fetch purchase details and all active products

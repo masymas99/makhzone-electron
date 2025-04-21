@@ -641,6 +641,25 @@ backend.get('/api/traders/financials', (req, res) => {
   });
 });
 
+
+function calculateWeightedAverageCost(oldQty, oldCost, newQty, newCost) {
+  const totalOldCost = (oldQty || 0) * (oldCost || 0);
+  const totalNewCost = (newQty || 0) * (newCost || 0);
+  const totalQuantity = (oldQty || 0) + (newQty || 0);
+  if (totalQuantity <= 0) return 0;
+  return (totalOldCost + totalNewCost) / totalQuantity;
+}
+
+// Helper function to reverse weighted average cost effect
+function reverseWeightedAverageCost(currentQty, currentCost, removedQty, removedCost) {
+    const currentTotalCost = (currentQty || 0) * (currentCost || 0);
+    const removedTotalCost = (removedQty || 0) * (removedCost || 0);
+    const remainingTotalCost = Math.max(0, currentTotalCost - removedTotalCost); // Ensure non-negative
+    const remainingQuantity = Math.max(0, (currentQty || 0) - (removedQty || 0)); // Ensure non-negative
+
+    if (remainingQuantity <= 0) return 0;
+    return remainingTotalCost / remainingQuantity;
+}
 // Routes للمشتريات
 backend.get('/api/purchases', (req, res) => {
   db.all(`
