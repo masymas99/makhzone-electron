@@ -712,10 +712,15 @@ async function deleteExpense(expenseId) {
           text: `هل أنت متأكد من حذف المصروف رقم ${expenseId}؟ لا يمكن التراجع عن هذا الإجراء.`,
           icon: 'warning',
           showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
+          confirmButtonColor: '#22c55e', // Green color for confirm
+          cancelButtonColor: '#ef4444', // Red color for cancel
           confirmButtonText: 'نعم، احذف!',
-          cancelButtonText: 'إلغاء'
+          cancelButtonText: 'إلغاء',
+          buttonsStyling: true,
+          customClass: {
+            confirmButton: 'bg-green-500 hover:bg-green-600',
+            cancelButton: 'bg-red-500 hover:bg-red-600'
+          }
         }).then((result) => {
           if (!result.isConfirmed) {
             return;
@@ -2406,8 +2411,11 @@ async function deleteExpense(expenseId) {
                 sel.required = true;
                 sel.innerHTML = '<option value="">-- اختر منتج --</option>';
                 products.forEach(p => {
+                    console.log(p);
                      const isSelected = detail && p.ProductID === detail.ProductID;
-                    sel.innerHTML += `<option value="${p.ProductID}" data-cost="${p.UnitCost || 0}" data-stock="${p.StockQuantity}"${isSelected ? ' selected' : ''}>${p.ProductName} (التكلفة الحالية: ${p.UnitCost?.toFixed(2) || 'N/A'})</option>`;
+                    //  add UnitPrice too
+
+                    sel.innerHTML += `<option value="${p.ProductID}"  data-cost="${p.UnitCost || 0}" data-stock="${p.StockQuantity}"${isSelected ? ' selected' : ''}>${p.ProductName} (التكلفة الحالية: ${p.UnitCost?.toFixed(2) || 'N/A'}, سعر البيع الحالي: ${p.UnitPrice?.toFixed(2) || 'N/A'})</option>`;
                 });
                 sel.addEventListener('change', (e) => {
                     const costInput = document.getElementById(`pCost${rowId}`);
